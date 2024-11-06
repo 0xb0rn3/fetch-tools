@@ -23,6 +23,7 @@ LOG_FILE="/tmp/fetch_install_$(date +%Y%m%d_%H%M%S).log"
 TERM_WIDTH=$(tput cols)
 CURRENT_USER=$SUDO_USER
 USER_HOME=$(getent passwd $SUDO_USER | cut -d: -f6)
+ZSH_CUSTOM="$USER_HOME/.oh-my-zsh/custom"
 
 # Print tool header with banner
 print_banner() {
@@ -103,19 +104,19 @@ detect_os() {
         PM="apt-get"
         PM_INSTALL="$PM install -y"
         PM_UPDATE="$PM update"
-        REQUIRED_PACKAGES="build-essential"
+        REQUIRED_PACKAGES="build-essential zsh git curl"
         OS="Debian"
     elif [ -f "/etc/arch-release" ]; then
         PM="pacman"
         PM_INSTALL="$PM -S --noconfirm"
         PM_UPDATE="$PM -Sy"
-        REQUIRED_PACKAGES="base-devel"
+        REQUIRED_PACKAGES="base-devel zsh git curl"
         OS="Arch"
     elif [ -f "/etc/redhat-release" ]; then
         PM="dnf"
         PM_INSTALL="$PM install -y"
         PM_UPDATE="$PM update -y"
-        REQUIRED_PACKAGES="gcc gcc-c++ make"
+        REQUIRED_PACKAGES="gcc gcc-c++ make zsh git curl"
         OS="RedHat"
     else
         print_status "OS Detection" "FAIL"
@@ -142,6 +143,51 @@ install_dependencies() {
         $PM_INSTALL $REQUIRED_PACKAGES >/dev/null 2>&1
     ) &
     show_spinner $! "Installing build dependencies"
+}
+
+# Install Oh My Zsh
+install_oh_my_zsh() {
+    print_section "Installing Oh My Zsh"
+    
+    if [ -d "$USER_HOME/.oh-my-zsh" ]; then
+        print_status "Oh My Zsh" "Already installed"
+        return 0
+    fi
+
+    echo -e "${DIM}Installing Oh My Zsh...${NC}"
+    (
+        sudo -u $SUDO_USER sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    ) &
+    show_spinner $! "Installing Oh My Zsh"
+
+    print_status "Oh My Zsh Installation" "OK"
+}
+
+# Install ZSH plugins
+install_zsh_plugins() {
+    print_section "Installing ZSH Plugins"
+    
+    local plugins=(
+        "zsh-syntax-highlighting;https://github.com/zsh-users/zsh-syntax-highlighting.git"
+        "zsh-autosuggestions;https://github.com/zsh-users/zsh-autosuggestions.git"
+    )
+    
+    for plugin in "${plugins[@]}"; do
+        IFS=';' read -r name url <<< "$plugin"
+        local plugin_dir="$ZSH_CUSTOM/plugins/$name"
+        
+        if [ ! -d "$plugin_dir" ]; then
+            echo -e "${DIM}Installing $name...${NC}"
+            (
+                sudo -u $SUDO_USER git clone --depth=1 "$url" "$plugin_dir" >/dev/null 2>&1
+            ) &
+            show_spinner $! "Installing $name plugin"
+        else
+            print_status "$name" "Already installed"
+        fi
+    done
+
+    print_status "Plugin Installation" "OK"
 }
 
 # Build tools
@@ -179,109 +225,49 @@ install_tools() {
     print_status "Installation" "OK"
 }
 
-# Configure fetch tool
-configure_fetch() {
-    print_section "Configuration"
+# Configure ZSH
+configure_zsh() {
+    print_section "Configuring ZSH"
     
-    # First, select installation scope
-    echo -e "${CYAN}Select installation scope:${NC}"
-    echo -e "1) User-specific  - Configure for current user only"
-    echo -e "2) System-wide    - Configure for all users"
-    echo -e "3) Both          - Configure for both current user and system-wide\n"
+    local zshrc="$USER_HOME/.zshrc"
     
-    read -p "Enter scope [1-3]: " scope_choice
+    # Backup existing configuration
+    if [ -f "$zshrc" ]; then
+        cp "$zshrc" "$zshrc.backup.$(date +%Y%m%d_%H%M%S)"
+    fi
     
-    # Then select fetch tool
-    echo -e "\n${CYAN}Select default fetch tool:${NC}"
+    # Deploy new configuration
+    cat templates/zshrc.template > "$zshrc"
+    chown $SUDO_USER:$SUDO_USER "$zshrc"
+    chmod 644 "$zshrc"
+    
+    # Configure fetch tool choice
+    echo -e "${CYAN}Select default fetch tool:${NC}"
     echo -e "1) Dragon Fetch  - Dragon style system info (Red theme)"
     echo -e "2) Anime Fetch   - Anime style system info (Cyan theme)"
     echo -e "3) None         - Don't set a default\n"
     
-    read -p "Enter fetch tool [1-3]: " tool_choice
-
-    # Prepare configuration content based on tool choice
-    case $tool_choice in
+    read -p "Enter choice [1-3]: " choice
+    
+    case $choice in
         1)
-            FETCH_CMD="command -v dragon-fetch >/dev/null && dragon-fetch"
-            TOOL_NAME="Dragon Fetch"
+            echo 'command -v dragon-fetch >/dev/null && dragon-fetch' >> "$zshrc"
+            print_status "Default Tool" "Dragon Fetch"
             ;;
         2)
-            FETCH_CMD="command -v anime-fetch >/dev/null && anime-fetch"
-            TOOL_NAME="Anime Fetch"
+            echo 'command -v anime-fetch >/dev/null && anime-fetch' >> "$zshrc"
+            print_status "Default Tool" "Anime Fetch"
             ;;
         3)
-            FETCH_CMD=""
-            TOOL_NAME="None"
+            print_status "Default Tool" "None"
             ;;
         *)
-            print_status "Tool Selection" "WARN"
+            print_status "Default Tool" "WARN"
             echo -e "${YELLOW}Invalid choice. No default set.${NC}"
-            return
-            ;;
-    esac
-
-    # Add term function definition
-    TERM_FUNC='# Term function definition
-term() {
-    clear
-}
-'
-
-    # Apply configurations based on scope choice
-    case $scope_choice in
-        1|3)
-            # User-specific configuration
-            USER_ZSHRC="$USER_HOME/.zshrc"
-            
-            # Backup existing configuration
-            if [ -f "$USER_ZSHRC" ]; then
-                cp "$USER_ZSHRC" "$USER_ZSHRC.backup"
-                # Remove existing configurations
-                sed -i '/dragon-fetch/d' "$USER_ZSHRC"
-                sed -i '/anime-fetch/d' "$USER_ZSHRC"
-                sed -i '/term()/d' "$USER_ZSHRC"
-                sed -i '/^term/d' "$USER_ZSHRC"
-            fi
-            
-            # Add new configuration
-            echo "$TERM_FUNC" >> "$USER_ZSHRC"
-            if [ ! -z "$FETCH_CMD" ]; then
-                echo "# Fetch tool configuration" >> "$USER_ZSHRC"
-                echo "$FETCH_CMD" >> "$USER_ZSHRC"
-            fi
-            chown $SUDO_USER:$SUDO_USER "$USER_ZSHRC"
-            print_status "User Configuration" "OK"
             ;;
     esac
     
-    case $scope_choice in
-        2|3)
-            # System-wide configuration
-            mkdir -p /etc/zsh
-            GLOBAL_ZSHRC="/etc/zsh/zshrc"
-            
-            # Backup existing configuration
-            if [ -f "$GLOBAL_ZSHRC" ]; then
-                cp "$GLOBAL_ZSHRC" "$GLOBAL_ZSHRC.backup"
-                # Remove existing configurations
-                sed -i '/dragon-fetch/d' "$GLOBAL_ZSHRC"
-                sed -i '/anime-fetch/d' "$GLOBAL_ZSHRC"
-                sed -i '/term()/d' "$GLOBAL_ZSHRC"
-                sed -i '/^term/d' "$GLOBAL_ZSHRC"
-            fi
-            
-            # Add new configuration
-            echo "$TERM_FUNC" >> "$GLOBAL_ZSHRC"
-            if [ ! -z "$FETCH_CMD" ]; then
-                echo "# Fetch tool configuration" >> "$GLOBAL_ZSHRC"
-                echo "$FETCH_CMD" >> "$GLOBAL_ZSHRC"
-            fi
-            chmod 644 "$GLOBAL_ZSHRC"
-            print_status "System-wide Configuration" "OK"
-            ;;
-    esac
-
-    print_status "Default Tool" "$TOOL_NAME"
+    print_status "ZSH Configuration" "OK"
 }
 
 # Cleanup function
@@ -303,16 +289,12 @@ print_completion() {
     echo -e "  ${CYAN}term${NC}          - Clear screen"
     echo
     echo -e "${BOLD}${WHITE}Installation location:${NC} $INSTALL_DIR"
+    echo -e "${BOLD}${WHITE}Configuration:${NC} $USER_HOME/.zshrc"
     echo -e "${BOLD}${WHITE}Log file:${NC} $LOG_FILE"
-    
-    case $scope_choice in
-        1) echo -e "${BOLD}${WHITE}Configuration:${NC} $USER_HOME/.zshrc" ;;
-        2) echo -e "${BOLD}${WHITE}Configuration:${NC} /etc/zsh/zshrc" ;;
-        3) echo -e "${BOLD}${WHITE}Configurations:${NC} $USER_HOME/.zshrc and /etc/zsh/zshrc" ;;
-    esac
-    
     echo
-    echo -e "${DIM}Please restart your terminal or run 'source ~/.zshrc' to apply changes${NC}"
+    echo -e "${DIM}Please restart your terminal or run:${NC}"
+    echo -e "${YELLOW}source ~/.zshrc${NC}"
+    echo -e "${DIM}to apply changes${NC}"
     printf "%${TERM_WIDTH}s\n\n" | tr ' ' '═'
 }
 
@@ -322,9 +304,11 @@ main() {
     check_root
     detect_os
     install_dependencies
+    install_oh_my_zsh
+    install_zsh_plugins
     build_tools
     install_tools
-    configure_fetch
+    configure_zsh
     cleanup
     print_completion
 }
