@@ -64,7 +64,11 @@ make clean
 make
 sudo make install
 ```
+## OPTIONAL!!
 
+If youd like to modify your zshrc use my .zshrc file copy past to (~/.)
+ directory and replace the one you have.
+ 
 ## Support
 
 - Debian-based distributions (Ubuntu, Linux Mint, etc.)
