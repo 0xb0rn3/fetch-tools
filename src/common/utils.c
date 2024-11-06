@@ -1,6 +1,5 @@
 #include "fetch.h"
 
-// Get command output helper function
 char* get_command_output(const char* cmd) {
     FILE* fp = popen(cmd, "r");
     if (!fp) return NULL;
@@ -16,7 +15,6 @@ char* get_command_output(const char* cmd) {
     return output;
 }
 
-// Get system information
 void get_system_info(SystemInfo *info) {
     struct utsname uts;
     struct sysinfo si;
@@ -76,14 +74,6 @@ void get_system_info(SystemInfo *info) {
     unsigned long used_ram = (si.totalram - si.freeram) * si.mem_unit / (1024 * 1024);
     snprintf(info->memory, sizeof(info->memory), "%lu MB / %lu MB", used_ram, total_ram);
     
-    // Uptime calculation
-    unsigned long uptime = si.uptime;
-    unsigned long days = uptime / 86400;
-    unsigned long hours = (uptime % 86400) / 3600;
-    unsigned long minutes = (uptime % 3600) / 60;
-    snprintf(info->uptime, sizeof(info->uptime), "%lu days, %lu hours, %lu minutes", 
-             days, hours, minutes);
-    
     // Disk space
     char *df_cmd = "df -h / | tail -n 1 | awk '{print $3\"/\"$2\" (\"$5\")\"}\'";
     char *disk = get_command_output(df_cmd);
@@ -91,9 +81,16 @@ void get_system_info(SystemInfo *info) {
         strncpy(info->disk_space, disk, sizeof(info->disk_space) - 1);
         free(disk);
     }
+
+    // Uptime calculation
+    unsigned long uptime = si.uptime;
+    unsigned long days = uptime / 86400;
+    unsigned long hours = (uptime % 86400) / 3600;
+    unsigned long minutes = (uptime % 3600) / 60;
+    snprintf(info->uptime, sizeof(info->uptime), "%lu days, %lu hours, %lu minutes", 
+             days, hours, minutes);
 }
 
-// Print formatted information line
 void print_info_line(const char* label, const char* value) {
-    printf("%s%s%s: %s%s%s\n", BOLD, label, RESET, BLUE, value, RESET);
+    printf("%s%s%s: %s%s%s\n", BOLD, label, RESET, CYAN, value, RESET);
 }
