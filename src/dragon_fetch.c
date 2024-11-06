@@ -1,49 +1,37 @@
 #include "common/fetch.h"
 
-const char* ANIME_ART[] = {
-    "⠀⠀⠀⠀⢀⡠⠤⠔⢲⢶⡖⠒⠤⢄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀",
-    "⠀⠀⣠⡚⠁⢀⠀⠀⢄⢻⣿⠀⠀⠀⡙⣷⢤⡀⠀⠀⠀⠀⠀⠀",
-    "⠀⡜⢱⣇⠀⣧⢣⡀⠀⡀⢻⡇⠀⡄⢰⣿⣷⡌⣢⡀⠀⠀⠀⠀",
-    "⠸⡇⡎⡿⣆⠹⣷⡹⣄⠙⣽⣿⢸⣧⣼⣿⣿⣿⣶⣼⣆⠀⠀⠀",
-    "⣷⡇⣷⡇⢹⢳⡽⣿⡽⣷⡜⣿⣾⢸⣿⣿⣿⣿⣿⣿⣿⣷⣄⠀",
-    "⣿⡇⡿⣿⠀⠣⠹⣾⣿⣮⠿⣞⣿⢸⣿⣛⢿⣿⡟⠯⠉⠙⠛⠓",
-    "⣿⣇⣷⠙⡇⠀⠁⠀⠉⣽⣷⣾⢿⢸⣿⠀⢸⣿⢿⠀⠀⠀⠀⠀",
-    "⡟⢿⣿⣷⣾⣆⠀⠀⠘⠘⠿⠛⢸⣼⣿⢖⣼⣿⠘⡆⠀⠀⠀⠀",
-    "⠃⢸⣿⣿⡘⠋⠀⠀⠀⠀⠀⠀⣸⣿⣿⣿⣿⣿⡆⠇⠀⠀⠀⠀",
-    "⠀⢸⡿⣿⣇⠀⠈⠀⠤⠀⠀⢀⣿⣿⣿⣿⣿⣿⣧⢸⠀⠀⠀⠀",
-    "⠀⠈⡇⣿⣿⣷⣤⣀⠀⣀⠔⠋⣿⣿⣿⣿⣿⡟⣿⡞⡄⠀⠀⠀",
-    "⠀⠀⢿⢸⣿⣿⣿⣿⣿⡇⠀⢠⣿⡏⢿⣿⣿⡇⢸⣇⠇⠀⠀⠀",
-    "⠀⠀⢸⡏⣿⣿⣿⠟⠋⣀⠠⣾⣿⠡⠀⢉⢟⠷⢼⣿⣿⠀⠀⠀",
-    "⠀⠀⠈⣷⡏⡱⠁⠀⠊⠀⠀⣿⣏⣀⡠⢣⠃⠀⠀⢹⣿⡄⠀⠀",
-    "⠀⠀⠘⢼⣿⠀⢠⣤⣀⠉⣹⡿⠀⠁⠀⡸⠀⠀⠀⠈⣿⡇⠀⠀"
+const char* DRAGON_ART[] = {
+    "⠀⠀⠀⠀⠀⠀⠀⣀⣤⠴⠖⠚⠛⠛⠙⠛⠓⠒⠦⢤⣀⠀⠀⠀⠀⠀⠀⠀⠀   ",
+    "⠀⠀⠀⠀⣠⡴⠋⠁⠀⢠⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠦⣀⠀⠀⠀⠀⠀  ",
+    "⠀⠀⣠⠞⠁⠀⠀⠀⠀⠈⢿⣦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⡄⠀⠀⠀  ",
+    "⠀⣴⠋⠀⠀⠀⠀⢦⣄⠰⣄⡛⢿⣷⣦⣤⣀⡀⠀⠀⠀⠀⠀⠀⠀⠘⢆⠀⠀  ",
+    "⣼⠁⠀⠀⠀⠀⠀⠈⣿⣿⣿⣿⣷⣿⣿⣿⣿⣿⣷⣦⣀⠀⠀⠀⠀⠀⠈⢇⠀  ",
+    "⢰⠇⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⣿⣻⣿⣿⣿⣿⣌⡻⣿⣄⠀⠀⠀⠀⠀⠘⡆  ",
+    "⣾⠀⠀⠀⠀⢀⣾⣿⣿⡿⢚⣿⡿⠟⠙⢿⣿⣿⣿⡟⠻⢿⣿⣷⣶⣆⠀⠀⠀",
+    "⣿⠀⠀⠀⠀⣼⣿⡿⣫⣾⡖⠀⠐⣿⠗⠀⠉⠻⣿⣷⠀⠀⠈⠙⢿⡏⠀⠀⠀",
+    "⢿⠀⠀⠀⠀⣿⣿⣵⣿⡟⢴⣦⣤⠙⠀⠀⠀⢀⣼⣿⣆⡀⠀⠀⠘⠀⠀⠀⠀",
+    "⠸⡄⠀⠀⠀⡿⢻⣿⣿⡇⡌⢻⣿⡀⠀⠀⠀⠀⠈⠉⠁⠀⠀⠀⠀⠀⠀⢀⠃",
+    "⢳⡀⠀⠀⠇⠸⣿⣿⡇⣧⡀⠈⠓⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠌   ",
+    "⠀⠳⡄⠀⠀⠀⢻⣿⣇⢻⣷⡴⢦⣤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠎⠀   ",
+    "⠀⠀⠘⢦⡀⠀⠀⠙⣿⡀⠻⠿⢶⣤⣀⣀⠀⠀⠀⠀⠀⠀⢀⠔⠁     ",
+    "⠀⠀⠀⠀⠉⠲⢄⡀⠈⠓⠄⠀⠀⠀⠀⠉⠁⠀⠀⠀⡠⠔⠁       ",
+    "⠀⠀⠀⠀⠀⠀⠀⠉⠑⠒⠤⠤⠤⠤⠂⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
 };
-
-void print_color_blocks() {
-    printf("\n");
-    // Print color blocks
-    for(int i = 0; i < 8; i++) {
-        printf("\033[4%dm   ", i);
-    }
-    printf(RESET "\n");
-    for(int i = 0; i < 8; i++) {
-        printf("\033[10%dm   ", i);
-    }
-    printf(RESET "\n\n");
-}
 
 int main() {
     SystemInfo info;
     get_system_info(&info);
     
+    // Print Dragon ASCII art with system information
     printf("\n");
     int info_line = 0;
-    
-    for (int i = 0; i < sizeof(ANIME_ART) / sizeof(ANIME_ART[0]); i++) {
-        printf("%s%s%s", CYAN, ANIME_ART[i], RESET);
+    for (int i = 0; i < sizeof(DRAGON_ART) / sizeof(DRAGON_ART[0]); i++) {
+        printf("%s%s%s", RED, DRAGON_ART[i], RESET);
         
+        // Print system information alongside the art
         switch(info_line) {
             case 0:
-                printf("  %s%s%s@%s%s%s", BOLD, info.username, CYAN, info.hostname, RESET, RESET);
+                printf("  %s%s%s@%s%s%s", BOLD, info.username, BLUE, info.hostname, RESET, RESET);
                 break;
             case 1:
                 printf("  %s%s%s", BOLD, "OS: ", RESET);
@@ -77,7 +65,6 @@ int main() {
         printf("\n");
         info_line++;
     }
-    
-    print_color_blocks();
+    printf("\n");
     return 0;
 }
