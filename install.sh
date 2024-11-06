@@ -21,6 +21,8 @@ INSTALL_DIR="/usr/bin"
 BUILD_DIR="build"
 LOG_FILE="/tmp/fetch_install_$(date +%Y%m%d_%H%M%S).log"
 TERM_WIDTH=$(tput cols)
+CURRENT_USER=$SUDO_USER
+USER_HOME=$(getent passwd $SUDO_USER | cut -d: -f6)
 
 # Print tool header with banner
 print_banner() {
@@ -63,22 +65,6 @@ print_status() {
     esac
 }
 
-# Show progress bar
-show_progress() {
-    local text="$1"
-    local current="$2"
-    local total="$3"
-    local width=50
-    local percentage=$((current * 100 / total))
-    local completed=$((width * current / total))
-    local remaining=$((width - completed))
-    
-    printf "\r${ITALIC}%-30s${NC} [" "$text"
-    printf "%${completed}s" | tr ' ' '█'
-    printf "%${remaining}s" | tr ' ' '░'
-    printf "] ${BOLD}%3d%%${NC}" $percentage
-}
-
 # Show spinner animation
 show_spinner() {
     local pid=$1
@@ -99,6 +85,11 @@ check_root() {
     if [ "$EUID" -ne 0 ]; then
         print_status "Root Privileges" "FAIL"
         echo -e "${RED}Please run as root or with sudo${NC}"
+        exit 1
+    fi
+    if [ -z "$SUDO_USER" ]; then
+        print_status "User Detection" "FAIL"
+        echo -e "${RED}Please run with sudo, not as root directly${NC}"
         exit 1
     fi
     print_status "Root Privileges" "OK"
@@ -188,85 +179,109 @@ install_tools() {
     print_status "Installation" "OK"
 }
 
-# Configure shell integration
+# Configure fetch tool
 configure_fetch() {
-    print_section "Shell Integration"
+    print_section "Configuration"
     
-    # Create zsh directories if they don't exist
-    mkdir -p /etc/zsh
-    mkdir -p /etc/profile.d
-
-    # Create fetch script
-    cat > /etc/profile.d/fetch-tools.sh << 'EOF'
-#!/bin/bash
-term() {
-    clear
-}
-export -f term
-EOF
-
-    # Make script executable
-    chmod +x /etc/profile.d/fetch-tools.sh
-
-    # Remove any existing fetch configurations
-    if [ -f "/etc/zsh/zshrc" ]; then
-        sed -i '/dragon-fetch/d' /etc/zsh/zshrc
-        sed -i '/anime-fetch/d' /etc/zsh/zshrc
-        sed -i '/term/d' /etc/zsh/zshrc
-        sed -i '/function term/d' /etc/zsh/zshrc
-    else
-        touch /etc/zsh/zshrc
-    fi
-
-    echo -e "${CYAN}Select default fetch tool:${NC}"
+    # First, select installation scope
+    echo -e "${CYAN}Select installation scope:${NC}"
+    echo -e "1) User-specific  - Configure for current user only"
+    echo -e "2) System-wide    - Configure for all users"
+    echo -e "3) Both          - Configure for both current user and system-wide\n"
+    
+    read -p "Enter scope [1-3]: " scope_choice
+    
+    # Then select fetch tool
+    echo -e "\n${CYAN}Select default fetch tool:${NC}"
     echo -e "1) Dragon Fetch  - Dragon style system info (Red theme)"
     echo -e "2) Anime Fetch   - Anime style system info (Cyan theme)"
     echo -e "3) None         - Don't set a default\n"
     
-    read -p "Enter your choice [1-3]: " choice
-    
-    # Add new configuration
-    cat >> /etc/zsh/zshrc << 'EOF'
+    read -p "Enter fetch tool [1-3]: " tool_choice
 
-# Term function
-function term {
-    clear
-}
-
-EOF
-
-    case $choice in
+    # Prepare configuration content based on tool choice
+    case $tool_choice in
         1)
-            cat >> /etc/zsh/zshrc << 'EOF'
-# Fetch tool configuration
-if command -v dragon-fetch >/dev/null 2>&1; then
-    dragon-fetch
-fi
-EOF
-            print_status "Default Tool" "Dragon Fetch"
+            FETCH_CMD="command -v dragon-fetch >/dev/null && dragon-fetch"
+            TOOL_NAME="Dragon Fetch"
             ;;
         2)
-            cat >> /etc/zsh/zshrc << 'EOF'
-# Fetch tool configuration
-if command -v anime-fetch >/dev/null 2>&1; then
-    anime-fetch
-fi
-EOF
-            print_status "Default Tool" "Anime Fetch"
+            FETCH_CMD="command -v anime-fetch >/dev/null && anime-fetch"
+            TOOL_NAME="Anime Fetch"
             ;;
         3)
-            print_status "Default Tool" "None"
+            FETCH_CMD=""
+            TOOL_NAME="None"
             ;;
         *)
-            print_status "Default Tool" "WARN"
+            print_status "Tool Selection" "WARN"
             echo -e "${YELLOW}Invalid choice. No default set.${NC}"
+            return
             ;;
     esac
 
-    # Set proper permissions
-    chmod 644 /etc/zsh/zshrc
+    # Add term function definition
+    TERM_FUNC='# Term function definition
+term() {
+    clear
+}
+'
+
+    # Apply configurations based on scope choice
+    case $scope_choice in
+        1|3)
+            # User-specific configuration
+            USER_ZSHRC="$USER_HOME/.zshrc"
+            
+            # Backup existing configuration
+            if [ -f "$USER_ZSHRC" ]; then
+                cp "$USER_ZSHRC" "$USER_ZSHRC.backup"
+                # Remove existing configurations
+                sed -i '/dragon-fetch/d' "$USER_ZSHRC"
+                sed -i '/anime-fetch/d' "$USER_ZSHRC"
+                sed -i '/term()/d' "$USER_ZSHRC"
+                sed -i '/^term/d' "$USER_ZSHRC"
+            fi
+            
+            # Add new configuration
+            echo "$TERM_FUNC" >> "$USER_ZSHRC"
+            if [ ! -z "$FETCH_CMD" ]; then
+                echo "# Fetch tool configuration" >> "$USER_ZSHRC"
+                echo "$FETCH_CMD" >> "$USER_ZSHRC"
+            fi
+            chown $SUDO_USER:$SUDO_USER "$USER_ZSHRC"
+            print_status "User Configuration" "OK"
+            ;;
+    esac
     
-    print_status "Shell Integration" "OK"
+    case $scope_choice in
+        2|3)
+            # System-wide configuration
+            mkdir -p /etc/zsh
+            GLOBAL_ZSHRC="/etc/zsh/zshrc"
+            
+            # Backup existing configuration
+            if [ -f "$GLOBAL_ZSHRC" ]; then
+                cp "$GLOBAL_ZSHRC" "$GLOBAL_ZSHRC.backup"
+                # Remove existing configurations
+                sed -i '/dragon-fetch/d' "$GLOBAL_ZSHRC"
+                sed -i '/anime-fetch/d' "$GLOBAL_ZSHRC"
+                sed -i '/term()/d' "$GLOBAL_ZSHRC"
+                sed -i '/^term/d' "$GLOBAL_ZSHRC"
+            fi
+            
+            # Add new configuration
+            echo "$TERM_FUNC" >> "$GLOBAL_ZSHRC"
+            if [ ! -z "$FETCH_CMD" ]; then
+                echo "# Fetch tool configuration" >> "$GLOBAL_ZSHRC"
+                echo "$FETCH_CMD" >> "$GLOBAL_ZSHRC"
+            fi
+            chmod 644 "$GLOBAL_ZSHRC"
+            print_status "System-wide Configuration" "OK"
+            ;;
+    esac
+
+    print_status "Default Tool" "$TOOL_NAME"
 }
 
 # Cleanup function
@@ -289,9 +304,15 @@ print_completion() {
     echo
     echo -e "${BOLD}${WHITE}Installation location:${NC} $INSTALL_DIR"
     echo -e "${BOLD}${WHITE}Log file:${NC} $LOG_FILE"
-    echo -e "${BOLD}${WHITE}Configuration:${NC} /etc/zsh/zshrc"
+    
+    case $scope_choice in
+        1) echo -e "${BOLD}${WHITE}Configuration:${NC} $USER_HOME/.zshrc" ;;
+        2) echo -e "${BOLD}${WHITE}Configuration:${NC} /etc/zsh/zshrc" ;;
+        3) echo -e "${BOLD}${WHITE}Configurations:${NC} $USER_HOME/.zshrc and /etc/zsh/zshrc" ;;
+    esac
+    
     echo
-    echo -e "${DIM}Please restart your terminal or run 'source /etc/zsh/zshrc' to apply changes${NC}"
+    echo -e "${DIM}Please restart your terminal or run 'source ~/.zshrc' to apply changes${NC}"
     printf "%${TERM_WIDTH}s\n\n" | tr ' ' '═'
 }
 
