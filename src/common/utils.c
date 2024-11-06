@@ -90,3 +90,7 @@ void get_system_info(SystemInfo *info) {
     snprintf(info->uptime, sizeof(info->uptime), "%lu days, %lu hours, %lu minutes", 
              days, hours, minutes);
 }
+
+void print_info_line(const char* label, const char* value) {
+    printf("%s%s%s: %s%s%s\n", BOLD, label, RESET, WHITE, value, RESET);
+}
