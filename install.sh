@@ -183,7 +183,7 @@ install_tools() {
     # Install binaries
     echo -e "${DIM}Installing binaries to $INSTALL_DIR...${NC}"
     install -m 755 $BUILD_DIR/dragon-fetch $INSTALL_DIR/
-    install -m 755 $BUILD_DIR/sys-fetch $INSTALL_DIR/
+    install -m 755 $BUILD_DIR/anime-fetch $INSTALL_DIR/
     
     print_status "Installation" "OK"
 }
@@ -199,72 +199,62 @@ configure_fetch() {
     # Create fetch script
     cat > /etc/profile.d/fetch-tools.sh << 'EOF'
 #!/bin/bash
-
-# Function for term command
 term() {
     clear
 }
-
-# Export the function
 export -f term
 EOF
 
     # Make script executable
     chmod +x /etc/profile.d/fetch-tools.sh
 
-    # Create or update global zshrc
-    touch /etc/zsh/zshrc
-
     # Remove any existing fetch configurations
-    sed -i '/dragon-fetch/d' /etc/zsh/zshrc
-    sed -i '/sys-fetch/d' /etc/zsh/zshrc
-    sed -i '/term/d' /etc/zsh/zshrc
+    if [ -f "/etc/zsh/zshrc" ]; then
+        sed -i '/dragon-fetch/d' /etc/zsh/zshrc
+        sed -i '/anime-fetch/d' /etc/zsh/zshrc
+        sed -i '/term/d' /etc/zsh/zshrc
+        sed -i '/function term/d' /etc/zsh/zshrc
+    else
+        touch /etc/zsh/zshrc
+    fi
 
     echo -e "${CYAN}Select default fetch tool:${NC}"
-    echo -e "1) Dragon Fetch  - Artistic dragon ASCII with system info"
-    echo -e "2) System Fetch  - Clean system information display"
+    echo -e "1) Dragon Fetch  - Dragon style system info (Red theme)"
+    echo -e "2) Anime Fetch   - Anime style system info (Cyan theme)"
     echo -e "3) None         - Don't set a default\n"
     
     read -p "Enter your choice [1-3]: " choice
     
     # Add new configuration
+    cat >> /etc/zsh/zshrc << 'EOF'
+
+# Term function
+function term {
+    clear
+}
+
+EOF
+
     case $choice in
         1)
             cat >> /etc/zsh/zshrc << 'EOF'
-
 # Fetch tool configuration
 if command -v dragon-fetch >/dev/null 2>&1; then
     dragon-fetch
 fi
-# Clear screen function
-term() {
-    clear
-}
 EOF
             print_status "Default Tool" "Dragon Fetch"
             ;;
         2)
             cat >> /etc/zsh/zshrc << 'EOF'
-
 # Fetch tool configuration
-if command -v sys-fetch >/dev/null 2>&1; then
-    sys-fetch
+if command -v anime-fetch >/dev/null 2>&1; then
+    anime-fetch
 fi
-# Clear screen function
-term() {
-    clear
-}
 EOF
-            print_status "Default Tool" "System Fetch"
+            print_status "Default Tool" "Anime Fetch"
             ;;
         3)
-            cat >> /etc/zsh/zshrc << 'EOF'
-
-# Clear screen function
-term() {
-    clear
-}
-EOF
             print_status "Default Tool" "None"
             ;;
         *)
@@ -294,7 +284,7 @@ print_completion() {
     printf "%${TERM_WIDTH}s\n" | tr ' ' '═'
     echo -e "\n${BOLD}${WHITE}Available commands:${NC}"
     echo -e "  ${CYAN}dragon-fetch${NC}  - Display dragon-style system information"
-    echo -e "  ${CYAN}sys-fetch${NC}     - Display alternative system information"
+    echo -e "  ${CYAN}anime-fetch${NC}   - Display anime-style system information"
     echo -e "  ${CYAN}term${NC}          - Clear screen"
     echo
     echo -e "${BOLD}${WHITE}Installation location:${NC} $INSTALL_DIR"
