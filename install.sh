@@ -188,10 +188,38 @@ install_tools() {
     print_status "Installation" "OK"
 }
 
-# Configure default fetch tool
+# Configure shell integration
 configure_fetch() {
-    print_section "Configuration"
+    print_section "Shell Integration"
     
+    # Create zsh directories if they don't exist
+    mkdir -p /etc/zsh
+    mkdir -p /etc/profile.d
+
+    # Create fetch script
+    cat > /etc/profile.d/fetch-tools.sh << 'EOF'
+#!/bin/bash
+
+# Function for term command
+term() {
+    clear
+}
+
+# Export the function
+export -f term
+EOF
+
+    # Make script executable
+    chmod +x /etc/profile.d/fetch-tools.sh
+
+    # Create or update global zshrc
+    touch /etc/zsh/zshrc
+
+    # Remove any existing fetch configurations
+    sed -i '/dragon-fetch/d' /etc/zsh/zshrc
+    sed -i '/sys-fetch/d' /etc/zsh/zshrc
+    sed -i '/term/d' /etc/zsh/zshrc
+
     echo -e "${CYAN}Select default fetch tool:${NC}"
     echo -e "1) Dragon Fetch  - Artistic dragon ASCII with system info"
     echo -e "2) System Fetch  - Clean system information display"
@@ -199,18 +227,44 @@ configure_fetch() {
     
     read -p "Enter your choice [1-3]: " choice
     
+    # Add new configuration
     case $choice in
         1)
-            echo "dragon-fetch" >> /etc/zsh/zshrc
-            echo "term" >> /etc/zsh/zshrc
+            cat >> /etc/zsh/zshrc << 'EOF'
+
+# Fetch tool configuration
+if command -v dragon-fetch >/dev/null 2>&1; then
+    dragon-fetch
+fi
+# Clear screen function
+term() {
+    clear
+}
+EOF
             print_status "Default Tool" "Dragon Fetch"
             ;;
         2)
-            echo "sys-fetch" >> /etc/zsh/zshrc
-            echo "term" >> /etc/zsh/zshrc
+            cat >> /etc/zsh/zshrc << 'EOF'
+
+# Fetch tool configuration
+if command -v sys-fetch >/dev/null 2>&1; then
+    sys-fetch
+fi
+# Clear screen function
+term() {
+    clear
+}
+EOF
             print_status "Default Tool" "System Fetch"
             ;;
         3)
+            cat >> /etc/zsh/zshrc << 'EOF'
+
+# Clear screen function
+term() {
+    clear
+}
+EOF
             print_status "Default Tool" "None"
             ;;
         *)
@@ -218,6 +272,11 @@ configure_fetch() {
             echo -e "${YELLOW}Invalid choice. No default set.${NC}"
             ;;
     esac
+
+    # Set proper permissions
+    chmod 644 /etc/zsh/zshrc
+    
+    print_status "Shell Integration" "OK"
 }
 
 # Cleanup function
@@ -236,11 +295,13 @@ print_completion() {
     echo -e "\n${BOLD}${WHITE}Available commands:${NC}"
     echo -e "  ${CYAN}dragon-fetch${NC}  - Display dragon-style system information"
     echo -e "  ${CYAN}sys-fetch${NC}     - Display alternative system information"
+    echo -e "  ${CYAN}term${NC}          - Clear screen"
     echo
     echo -e "${BOLD}${WHITE}Installation location:${NC} $INSTALL_DIR"
     echo -e "${BOLD}${WHITE}Log file:${NC} $LOG_FILE"
+    echo -e "${BOLD}${WHITE}Configuration:${NC} /etc/zsh/zshrc"
     echo
-    echo -e "${DIM}Thank you for installing Fetch Tools!${NC}"
+    echo -e "${DIM}Please restart your terminal or run 'source /etc/zsh/zshrc' to apply changes${NC}"
     printf "%${TERM_WIDTH}s\n\n" | tr ' ' '═'
 }
 
