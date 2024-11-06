@@ -35,7 +35,6 @@ int main() {
     SystemInfo info;
     get_system_info(&info);
     
-    // Print system information with ASCII art
     printf("\n");
     int info_line = 0;
     
