@@ -27,7 +27,7 @@ The following packages will be automatically installed if missing:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/fetch-tools.git
+git clone https://github.com/q4n0/fetch-tools.git
 cd fetch-tools
 ```
 
