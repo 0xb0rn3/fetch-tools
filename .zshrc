@@ -69,7 +69,7 @@ zstyle ':completion:*' cache-path ~/.cache/zsh-completions
 # Configure custom prompt
 configure_prompt() {
     autoload -U colors && colors
-    PROMPT="%{$fg[red]%}╭─[%{$fg[white]%}ソロックス💀${user}%{$fg[red]%}]-[%{$fg[white]%}%~%{$fg[red]%}]
+    PROMPT="%{$fg[red]%}╭─[%{$fg[blue]%}ソロックス💀${user}%{$fg[red]%}]-[%{$fg[green]%}%~%{$fg[red]%}]
 ╰>> %{$reset_color%}"
 }
 
