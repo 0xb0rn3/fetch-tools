@@ -65,11 +65,9 @@ zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
 zstyle ':completion:*:*:*:*:*' menu select=2
 zstyle ':completion:*' use-cache yes
 zstyle ':completion:*' cache-path ~/.cache/zsh-completions
-
-# Configure custom prompt
 configure_prompt() {
     autoload -U colors && colors
-    PROMPT="%{$fg[red]%}╭─[%{$fg[blue]%}ソロックス💀${user}%{$fg[red]%}]-[%{$fg[green]%}%~%{$fg[red]%}]
+    PROMPT="%{$fg[red]%}╭─[%{$fg[blue]%}ソロックス💀${USER}%{$fg[red]%}]-[%{$fg[green]%}%~%{$fg[red]%}]
 ╰>> %{$reset_color%}"
 }
 
