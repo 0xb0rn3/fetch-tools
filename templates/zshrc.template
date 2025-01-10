@@ -126,7 +126,7 @@ function term() {
 }
 
 # Only call dragon-fetch once at the end
-if command -v dragon-fetch >/dev/null; then
+#if command -v dragon-fetch >/dev/null; then
     # Add a small delay to ensure proper initialization
-    (sleep 0.1 && dragon-fetch) &
-fi
+    #(sleep 0.1 && dragon-fetch) &
+#fi
