@@ -67,8 +67,8 @@ zstyle ':completion:*' use-cache yes
 zstyle ':completion:*' cache-path ~/.cache/zsh-completions
 configure_prompt() {
     autoload -U colors && colors
-    PROMPT="%{$fg[red]%}╭─[%{$fg[blue]%}ソロックス💀${USER}%{$fg[red]%}]-[%{$fg[green]%}%~%{$fg[red]%}]
-╰>> %{$reset_color%}"
+    PROMPT="%{$fg[red]%}╭─[%{$fg[green]%}ソロックス💀${USER}%{$fg[red]%}]-[%{$fg[grey]%}%~%{$fg[red]%}]
+╰:>> %{$reset_color%}"
 }
 
 # Apply prompt configuration
@@ -124,9 +124,3 @@ function http-server() {
 function term() {
     clear
 }
-
-# Only call dragon-fetch once at the end
-#if command -v dragon-fetch >/dev/null; then
-    # Add a small delay to ensure proper initialization
-    #(sleep 0.1 && dragon-fetch) &
-#fi
