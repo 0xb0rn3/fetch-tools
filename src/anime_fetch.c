@@ -1,5 +1,11 @@
 #include "common/fetch.h"
 
+#define COLOR_PRIMARY    "\033[38;5;39m"   // Bright blue for primary text
+#define COLOR_SECONDARY  "\033[38;5;147m"  // Light purple for secondary text
+#define COLOR_ACCENT    "\033[38;5;208m"   // Orange for accents
+#define COLOR_LABEL     "\033[1;38;5;255m" // Bright white for labels
+#define SEPARATOR       "═"                // Unicode box drawing character for separators
+
 const char* ANIME_ART[] = {
     "⠀⠀⠀⠀⢀⡠⠤⠔⢲⢶⡖⠒⠤⢄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀",
     "⠀⠀⣠⡚⠁⢀⠀⠀⢄⢻⣿⠀⠀⠀⡙⣷⢤⡀⠀⠀⠀⠀⠀⠀",
@@ -35,49 +41,42 @@ int main() {
     SystemInfo info;
     get_system_info(&info);
     
+    // Configuration for consistent formatting
+    FormatConfig format = {
+        .label_color = COLOR_LABEL,
+        .value_color = COLOR_SECONDARY,
+        .separator = "│",
+        .padding = -12  // Negative padding for left alignment
+    };
+    
     printf("\n");
-    int info_line = 0;
     
-    for (int i = 0; i < sizeof(ANIME_ART) / sizeof(ANIME_ART[0]); i++) {
-        printf("%s%s%s", CYAN, ANIME_ART[i], RESET);
-        
-        switch(info_line) {
-            case 0:
-                printf("  %s%s%s@%s%s%s", BOLD, info.username, CYAN, info.hostname, RESET, RESET);
-                break;
-            case 1:
-                printf("  %s%s%s", BOLD, "OS: ", RESET);
-                printf("%s", info.os_name);
-                break;
-            case 2:
-                printf("  %s%s%s", BOLD, "KERNEL: ", RESET);
-                printf("%s", info.kernel);
-                break;
-            case 3:
-                printf("  %s%s%s", BOLD, "SHELL: ", RESET);
-                printf("%s", info.shell);
-                break;
-            case 4:
-                printf("  %s%s%s", BOLD, "CPU: ", RESET);
-                printf("%s", info.cpu_info);
-                break;
-            case 5:
-                printf("  %s%s%s", BOLD, "MEMORY: ", RESET);
-                printf("%s", info.memory);
-                break;
-            case 6:
-                printf("  %s%s%s", BOLD, "DISK: ", RESET);
-                printf("%s", info.disk_space);
-                break;
-            case 7:
-                printf("  %s%s%s", BOLD, "UPTIME: ", RESET);
-                printf("%s", info.uptime);
-                break;
-        }
-        printf("\n");
-        info_line++;
+    // Print header with username and hostname
+    printf("%s%s%s@%s%s%s\n", 
+           COLOR_PRIMARY, info.username,
+           COLOR_ACCENT, COLOR_PRIMARY, info.hostname,
+           RESET);
+    
+    print_separator(40, COLOR_SECONDARY);
+    
+    // Print system information with consistent formatting
+    print_system_info("OS", info.os_name, &format);
+    print_system_info("KERNEL", info.kernel, &format);
+    print_system_info("SHELL", info.shell, &format);
+    print_system_info("CPU", info.cpu_info, &format);
+    print_system_info("MEMORY", info.memory, &format);
+    print_system_info("DISK", info.disk_space, &format);
+    print_system_info("UPTIME", info.uptime, &format);
+    
+    print_separator(40, COLOR_SECONDARY);
+    
+    // Print color palette
+    printf("\nColor Palette:\n");
+    for (int i = 0; i < 8; i++) {
+        printf("\033[48;5;%dm   ", i);
     }
+    printf("%s\n", RESET);
     
-    print_color_blocks();
+    printf("\n");
     return 0;
 }
