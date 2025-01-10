@@ -16,7 +16,7 @@ GRAY='\033[0;90m'
 NC='\033[0m'
 
 # Configuration
-VERSION="1.0.0"
+VERSION="0.0.3"
 INSTALL_DIR="/usr/bin"
 BUILD_DIR="build"
 LOG_FILE="/tmp/fetch_install_$(date +%Y%m%d_%H%M%S).log"
@@ -39,8 +39,8 @@ print_banner() {
     echo '    ╚═╝     ╚══════╝   ╚═╝    ╚═════╝╚═╝  ╚═╝       ╚═╝    ╚═════╝  ╚═════╝ ╚══════╝╚══════╝'
     echo -e "${NC}"
     printf "%${TERM_WIDTH}s\n" | tr ' ' '═'
-    echo -e "${BOLD}${PURPLE}                       System Information Display Tools Installer${NC}"
-    echo -e "${DIM}                                Version $VERSION - 2024${NC}"
+    echo -e "${BOLD}${PURPLE}                       linux Sys-Info Display Tools Installer${NC}"
+    echo -e "${DIM}                                Version $VERSION - LATEST${NC}"
     printf "%${TERM_WIDTH}s\n" | tr ' ' '═'
     echo
 }
