@@ -317,3 +317,11 @@ main() {
 {
     main "$@"
 } 2>&1 | tee -a "$LOG_FILE"
+if [ $? -eq 0 ]; then
+    clear
+    echo " Your shell is ready logout out now and login again or restart Terminal to see changes!"
+    sleep 2
+    source ~/.zshrc
+else:
+echo "Some issues were encountered please check if you met all requirements"
+fi    
