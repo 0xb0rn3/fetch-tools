@@ -29,11 +29,12 @@ The following packages will be automatically installed if missing:
 ```bash
 git clone https://github.com/q4n0/fetch-tools.git
 cd fetch-tools
+chmod +x run
 ```
 
 2. Run the installer:
 ```bash
-sudo ./install.sh
+sudo ./run
 ```
 
 ## Usage
