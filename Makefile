@@ -18,7 +18,11 @@ dragon-fetch: $(SRC_DIR)/dragon_fetch.c $(COMMON_SRCS)
 anime-fetch: $(SRC_DIR)/anime_fetch.c $(COMMON_SRCS)
 	$(CC) $(CFLAGS) $(INCLUDES) $^ -o $(BUILD_DIR)/$@
 
+install: all
+	install -m 755 $(BUILD_DIR)/dragon-fetch /usr/bin/
+	install -m 755 $(BUILD_DIR)/anime-fetch /usr/bin/
+
 clean:
 	@rm -rf $(BUILD_DIR)
 
-.PHONY: all setup clean
+.PHONY: all setup clean install
