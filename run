@@ -16,7 +16,7 @@ GRAY='\033[0;90m'
 NC='\033[0m'
 
 # Configuration variables
-VERSION="0.0.4"
+VERSION="0.0.2"
 INSTALL_DIR="/usr/bin"
 BUILD_DIR="build"
 LOG_FILE="/tmp/fetch_install_$(date +%Y%m%d_%H%M%S).log"
