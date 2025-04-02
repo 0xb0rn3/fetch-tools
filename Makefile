@@ -19,8 +19,8 @@ anime-fetch: $(SRC_DIR)/anime_fetch.c $(COMMON_SRCS)
 	$(CC) $(CFLAGS) $(INCLUDES) $^ -o $(BUILD_DIR)/$@
 
 install: all
-	install -m 755 $(BUILD_DIR)/dragon-fetch /usr/bin/
-	install -m 755 $(BUILD_DIR)/anime-fetch /usr/bin/
+	install -m 755 $(BUILD_DIR)/dragon-fetch $(INSTALL_DIR)/
+	install -m 755 $(BUILD_DIR)/anime-fetch $(INSTALL_DIR)/
 
 clean:
 	@rm -rf $(BUILD_DIR)
