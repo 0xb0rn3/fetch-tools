@@ -190,5 +190,8 @@ function dirhistory() {
 alias dh='dirs -v'
 alias dback='popd > /dev/null'
 
+# ble.sh will be loaded by the installer if selected
+# Note: The run script will add the source line below this comment
+
 # Created by `pipx` on 2025-03-26 20:42:53
-export PATH="$PATH:/home/0xb3/.local/bin"
+export PATH="$PATH:$HOME/.local/bin"
