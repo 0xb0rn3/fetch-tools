@@ -1,0 +1,194 @@
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
+# History configurations
+HISTFILE=~/.bash_history
+HISTSIZE=1000
+HISTFILESIZE=2000
+HISTCONTROL=ignoreboth:erasedups  # Equivalent to zsh hist_ignore_dups and hist_ignore_space
+shopt -s histappend  # Append to history file, don't overwrite
+
+# Enable some Bash features
+shopt -s autocd 2> /dev/null  # Change to named directory without using cd
+shopt -s cdspell  # Auto-correct minor spelling errors in cd path
+shopt -s checkwinsize  # Update window size after each command
+shopt -s cmdhist  # Save multi-line commands as one entry
+shopt -s globstar 2> /dev/null  # Enable ** for recursive globbing
+
+# Hide EOL sign
+export PROMPT_EOL_MARK=""
+
+# Configure key bindings (using readline settings)
+# Note: Not all zsh bindings can be directly translated
+bind '"\e[3;5~": kill-word'
+bind '"\e[3~": delete-char'
+bind '"\e[1;5C": forward-word'
+bind '"\e[1;5D": backward-word'
+bind '"\e[5~": beginning-of-history'
+bind '"\e[6~": end-of-history'
+bind '"\e[H": beginning-of-line'
+bind '"\e[F": end-of-line'
+bind '"\e[Z": undo'
+bind 'Space: magic-space'
+
+# Enable Bash completion
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+
+# Configure prompt
+configure_prompt() {
+    # Enable colors for prompt
+    if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
+        # We have color support
+        BLUE="\[\033[34m\]"
+        GREEN="\[\033[32m\]"
+        WHITE="\[\033[37m\]"
+        RESET="\[\033[0m\]"
+    else
+        BLUE=""
+        GREEN=""
+        WHITE=""
+        RESET=""
+    fi
+    PS1="${WHITE}[${BLUE}マスタ💀${USER}${WHITE}]-[${GREEN}\w${WHITE}]$ ${RESET}"
+}
+
+# Apply prompt configuration
+configure_prompt
+
+# Basic system aliases
+alias ls='ls --color=auto'
+alias ll='ls -l'
+alias la='ls -A'
+alias l='ls -CF'
+alias cls='clear'
+alias term='clear'
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+
+# Directory navigation
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+
+# System information
+alias df='df -h'
+alias free='free -m'
+alias myip='curl ifconfig.me'
+alias ports='netstat -tulanp'
+
+# Add color to man pages
+export LESS_TERMCAP_mb=$'\E[1;31m'
+export LESS_TERMCAP_md=$'\E[1;36m'
+export LESS_TERMCAP_me=$'\E[0m'
+export LESS_TERMCAP_so=$'\E[01;44;33m'
+export LESS_TERMCAP_se=$'\E[0m'
+export LESS_TERMCAP_us=$'\E[1;32m'
+export LESS_TERMCAP_ue=$'\E[0m'
+
+# Colored GCC warnings and errors
+export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+
+# Custom functions
+function http-server() {
+    python3 -m http.server
+}
+
+function term() {
+    clear
+}
+
+# Functionality approximating zsh plugins
+# git completion (if not already included in bash-completion)
+if [ -f /usr/share/git/completion/git-completion.bash ]; then
+    source /usr/share/git/completion/git-completion.bash
+fi
+
+# Extract function (similar to zsh extract plugin)
+function extract() {
+    if [ -f "$1" ]; then
+        case "$1" in
+            *.tar.bz2)   tar xjf "$1"     ;;
+            *.tar.gz)    tar xzf "$1"     ;;
+            *.bz2)       bunzip2 "$1"     ;;
+            *.rar)       unrar e "$1"     ;;
+            *.gz)        gunzip "$1"      ;;
+            *.tar)       tar xf "$1"      ;;
+            *.tbz2)      tar xjf "$1"     ;;
+            *.tgz)       tar xzf "$1"     ;;
+            *.zip)       unzip "$1"       ;;
+            *.Z)         uncompress "$1"  ;;
+            *.7z)        7z x "$1"        ;;
+            *)           echo "'$1' cannot be extracted via extract()" ;;
+        esac
+    else
+        echo "'$1' is not a valid file"
+    fi
+}
+
+# sudo functionality (press ESC twice to prepend sudo)
+bind '"\e\e": "\C-asudo \C-e"'
+
+# Copy path and file functions
+function copypath() {
+    pwd | tr -d '\n' | xclip -selection clipboard
+    echo "Path copied to clipboard."
+}
+
+function copyfile() {
+    cat "$1" | xclip -selection clipboard
+    echo "File content copied to clipboard."
+}
+
+# Web search function (simplified version of zsh web-search)
+function web_search() {
+    local engine="$1"
+    local search="${*:2}"
+    
+    if [ -z "$search" ]; then
+        echo "Usage: $0 [google|bing|duckduckgo] search_term"
+        return 1
+    fi
+    
+    search="${search// /+}"
+    
+    case "$engine" in
+        google)     xdg-open "https://www.google.com/search?q=$search" ;;
+        bing)       xdg-open "https://www.bing.com/search?q=$search" ;;
+        duckduckgo) xdg-open "https://duckduckgo.com/?q=$search" ;;
+        *)          xdg-open "https://www.google.com/search?q=$search" ;;
+    esac
+}
+
+alias google='web_search google'
+alias bing='web_search bing'
+alias ddg='web_search duckduckgo'
+
+# URL tools functionality (simplified)
+function urlencode() {
+    python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))" "$1"
+}
+
+function urldecode() {
+    python3 -c "import sys, urllib.parse; print(urllib.parse.unquote(sys.argv[1]))" "$1"
+}
+
+# Directory history (simplified)
+function dirhistory() {
+    pushd "$@" > /dev/null
+}
+
+alias dh='dirs -v'
+alias dback='popd > /dev/null'
+
+# Created by `pipx` on 2025-03-26 20:42:53
+export PATH="$PATH:/home/0xb3/.local/bin"
