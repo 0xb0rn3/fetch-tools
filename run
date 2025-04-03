@@ -25,20 +25,20 @@ CURRENT_USER=$SUDO_USER
 USER_HOME=$(getent passwd $SUDO_USER | cut -d: -f6)
 ZSH_CUSTOM="$USER_HOME/.oh-my-zsh/custom"
 
-# Display the application banner
+# Display the application banner with rounded corners
 print_banner() {
     clear
     echo
-    printf "%${TERM_WIDTH}s\n" | tr ' ' '━'
+    printf "%${TERM_WIDTH}s\n" | tr ' ' '─'
     echo -e "${BOLD}${BLUE}"
-    echo '   ┌─────────────────────────────────┐'
-    echo '   │          FETCH TOOLS            │'
-    echo '   │ System Info Display Suite v0.2  │'
-    echo '   └─────────────────────────────────┘'
+    echo '╭───────────────────────────────╮'
+    echo '│       FETCH TOOLS             │'
+    echo '│  System Info Display Suite    │'
+    echo '╰───────────────────────────────╯'
     echo -e "${NC}"
-    echo -e "${BOLD}${PURPLE}       Setup & Configuration Tool${NC}"
-    echo -e "${DIM}          Version $VERSION - LATEST${NC}"
-    printf "%${TERM_WIDTH}s\n" | tr ' ' '━'
+    echo -e "${BOLD}${PURPLE}    Setup & Configuration Tool${NC}"
+    echo -e "${DIM}       Version $VERSION - LATEST${NC}"
+    printf "%${TERM_WIDTH}s\n" | tr ' ' '─'
     echo
 }
 
@@ -57,11 +57,10 @@ print_status() {
     esac
 }
 
-# Display section headers
+# Display section headers with minimal design
 print_section() {
     local text="$1"
-    echo -e "\n${BOLD}${CYAN}◆ ${text}${NC}"
-    echo -e "${DIM}$(printf '%.s─' $(seq 1 $TERM_WIDTH))${NC}"
+    echo -e "\n${BOLD}${CYAN}╭─ ${text} ─╮${NC}"
 }
 
 # Show progress spinner animation
@@ -77,52 +76,6 @@ show_spinner() {
         sleep .1
     done
     printf "\r%-45s${GREEN}✓${NC}\n" "$text"
-}
-
-# Handle shell changing functionality
-change_shell() {
-    print_section "Shell Configuration"
-    
-    local current_shell=$(getent passwd $SUDO_USER | cut -d: -f7)
-    local zsh_path=$(which zsh)
-    
-    if [ "$current_shell" = "$zsh_path" ]; then
-        print_status "Current Shell" "Already using Zsh"
-        return 0
-    fi
-    
-    echo -e "${CYAN}Current shell: ${GRAY}$current_shell${NC}"
-    echo -e "${CYAN}Available shell: ${GRAY}$zsh_path${NC}\n"
-    
-    if [ ! -f "$zsh_path" ]; then
-        print_status "Zsh Installation" "FAIL"
-        echo -e "${RED}Zsh not found. Installing dependencies first...${NC}"
-        return 1
-    fi
-    
-    if ! grep -q "^$zsh_path\$" /etc/shells; then
-        echo -e "${DIM}Adding Zsh to /etc/shells...${NC}"
-        echo "$zsh_path" >> /etc/shells
-    fi
-    
-    echo -e "${CYAN}Would you like to change your default shell to Zsh? [y/N]${NC}"
-    read -r -n 1 change_shell_choice
-    echo
-    
-    if [[ "$change_shell_choice" =~ ^[Yy]$ ]]; then
-        (chsh -s "$zsh_path" $SUDO_USER >/dev/null 2>&1) &
-        show_spinner $! "Changing default shell"
-        
-        if [ $? -eq 0 ]; then
-            print_status "Shell Change" "OK"
-            echo -e "${GREEN}✓ Shell successfully changed to Zsh${NC}"
-        else
-            print_status "Shell Change" "FAIL"
-            echo -e "${RED}✗ Failed to change shell${NC}"
-        fi
-    else
-        print_status "Shell Change" "SKIP"
-    fi
 }
 
 # Verify root privileges
@@ -172,7 +125,23 @@ detect_os() {
     echo -e "${DIM}Detected: $OS Linux${NC}"
 }
 
-# Install required dependencies
+# Check if a package is installed
+is_package_installed() {
+    local package=$1
+    case $OS in
+        "Debian")
+            dpkg -l | grep -q " $package "
+            ;;
+        "Arch")
+            pacman -Q $package &> /dev/null
+            ;;
+        "RedHat")
+            rpm -q $package &> /dev/null
+            ;;
+    esac
+}
+
+# Install required dependencies only if not already installed
 install_dependencies() {
     print_section "Installing Dependencies"
     
@@ -180,9 +149,15 @@ install_dependencies() {
     ($PM_UPDATE >/dev/null 2>&1) &
     show_spinner $! "Updating package manager"
     
-    echo -e "${DIM}Installing required packages...${NC}"
-    ($PM_INSTALL $REQUIRED_PACKAGES >/dev/null 2>&1) &
-    show_spinner $! "Installing build dependencies"
+    for package in $REQUIRED_PACKAGES; do
+        if is_package_installed $package; then
+            print_status "$package" "SKIP"
+        else
+            echo -e "${DIM}Installing $package...${NC}"
+            ($PM_INSTALL $package >/dev/null 2>&1) &
+            show_spinner $! "Installing $package"
+        fi
+    done
 }
 
 # Install Oh My Zsh framework
@@ -190,7 +165,7 @@ install_oh_my_zsh() {
     print_section "Installing Oh My Zsh"
     
     if [ -d "$USER_HOME/.oh-my-zsh" ]; then
-        print_status "Oh My Zsh" "Already installed"
+        print_status "Oh My Zsh" "SKIP"
         return 0
     fi
 
@@ -212,35 +187,32 @@ install_zsh_plugins() {
         IFS=';' read -r name url <<< "$plugin"
         local plugin_dir="$ZSH_CUSTOM/plugins/$name"
         
-        if [ ! -d "$plugin_dir" ]; then
+        if [ -d "$plugin_dir" ]; then
+            print_status "$name" "SKIP"
+        else
             (sudo -u $SUDO_USER git clone --depth=1 "$url" "$plugin_dir" >/dev/null 2>&1) &
             show_spinner $! "Installing $name"
-        else
-            print_status "$name" "Already installed"
         fi
     done
 }
 
-# Install ble.sh for Bash
+# Install ble.sh for Bash using the quick install method
 install_blesh() {
     print_section "Installing ble.sh for Bash"
     
     local blesh_dir="$USER_HOME/.local/share/blesh"
     
     if [ -d "$blesh_dir" ]; then
-        print_status "ble.sh" "Already installed"
+        print_status "ble.sh" "SKIP"
         return 0
     fi
     
     (
-        cd /tmp
-        rm -rf ble.sh
-        sudo -u $SUDO_USER git clone --recursive https://github.com/akinomyoga/ble.sh.git >/dev/null 2>&1
+        cd "$USER_HOME"
+        sudo -u $SUDO_USER git clone --recursive --depth 1 --shallow-submodules https://github.com/akinomyoga/ble.sh.git >/dev/null 2>&1
         cd ble.sh
-        sudo -u $SUDO_USER make >/dev/null 2>&1
-        mkdir -p "$blesh_dir"
-        cp -r out/* "$blesh_dir/"
-        chown -R $SUDO_USER:$SUDO_USER "$blesh_dir"
+        sudo -u $SUDO_USER make install PREFIX="$USER_HOME/.local" >/dev/null 2>&1
+        rm -rf "$USER_HOME/ble.sh"
     ) &
     show_spinner $! "Installing ble.sh"
     
@@ -336,7 +308,7 @@ configure_bash() {
     # Add ble.sh to bashrc if installed
     if [ -d "$USER_HOME/.local/share/blesh" ]; then
         echo -e "\n# Load ble.sh for enhanced bash experience" >> "$bashrc"
-        echo 'source ~/.local/share/blesh/ble.sh' >> "$bashrc"
+        echo "source $USER_HOME/.local/share/blesh/ble.sh" >> "$bashrc"
     fi
     
     chown $SUDO_USER:$SUDO_USER "$bashrc"
@@ -368,34 +340,87 @@ configure_bash() {
     esac
 }
 
+# Handle shell changing functionality
+change_shell() {
+    print_section "Shell Configuration"
+    
+    if [ "$SHELL_CHOICE" != "zsh" ]; then
+        print_status "Shell Change" "SKIP"
+        echo -e "${DIM}Configuring for Bash, no shell change needed.${NC}"
+        return 0
+    fi
+    
+    local current_shell=$(getent passwd $SUDO_USER | cut -d: -f7)
+    local zsh_path=$(which zsh)
+    
+    if [ "$current_shell" = "$zsh_path" ]; then
+        print_status "Current Shell" "SKIP"
+        echo -e "${DIM}Already using Zsh${NC}"
+        return 0
+    fi
+    
+    echo -e "${CYAN}Current shell: ${GRAY}$current_shell${NC}"
+    echo -e "${CYAN}Available shell: ${GRAY}$zsh_path${NC}\n"
+    
+    if [ ! -f "$zsh_path" ]; then
+        print_status "Zsh Installation" "FAIL"
+        echo -e "${RED}Zsh not found. Please install Zsh first.${NC}"
+        return 1
+    fi
+    
+    if ! grep -q "^$zsh_path\$" /etc/shells; then
+        echo -e "${DIM}Adding Zsh to /etc/shells...${NC}"
+        echo "$zsh_path" >> /etc/shells
+    fi
+    
+    echo -e "${CYAN}Would you like to change your default shell to Zsh? [y/N]${NC}"
+    read -r -n 1 change_shell_choice
+    echo
+    
+    if [[ "$change_shell_choice" =~ ^[Yy]$ ]]; then
+        (chsh -s "$zsh_path" $SUDO_USER >/dev/null 2>&1) &
+        show_spinner $! "Changing default shell"
+        
+        if [ $? -eq 0 ]; then
+            print_status "Shell Change" "OK"
+            echo -e "${GREEN}✓ Shell successfully changed to Zsh${NC}"
+        else
+            print_status "Shell Change" "FAIL"
+            echo -e "${RED}✗ Failed to change shell${NC}"
+        fi
+    else
+        print_status "Shell Change" "SKIP"
+    fi
+}
+
 # Clean up temporary files
 cleanup() {
     print_section "Cleanup"
-    (rm -rf $BUILD_DIR /tmp/ble.sh) &
+    (rm -rf $BUILD_DIR) &
     show_spinner $! "Removing temporary files"
     print_status "Cleanup" "OK"
 }
 
 # Display completion message
 print_completion() {
-    printf "%${TERM_WIDTH}s\n" | tr ' ' '━'
-    echo -e "${BOLD}${GREEN}             Installation Complete!${NC}"
-    printf "%${TERM_WIDTH}s\n" | tr ' ' '━'
-    echo -e "\n${BOLD}${WHITE}Available commands:${NC}"
+    echo -e "\n${BOLD}${GREEN}╭─ Installation Complete! ─╮${NC}"
+    echo -e "${BOLD}${WHITE}Available commands:${NC}"
     echo -e "  ${CYAN}dragon-fetch${NC}  - Dragon-style system info"
     echo -e "  ${CYAN}anime-fetch${NC}   - Anime-style system info"
     echo
     echo -e "${BOLD}${WHITE}Locations:${NC}"
     echo -e "  ${DIM}Installation:${NC} $INSTALL_DIR"
-    echo -e "  ${DIM}ZSH Configuration:${NC} $USER_HOME/.zshrc"
-    echo -e "  ${DIM}BASH Configuration:${NC} $USER_HOME/.bashrc"
+    if [ "$SHELL_CHOICE" = "zsh" ]; then
+        echo -e "  ${DIM}ZSH Configuration:${NC} $USER_HOME/.zshrc"
+    else
+        echo -e "  ${DIM}BASH Configuration:${NC} $USER_HOME/.bashrc"
+    fi
     if [ -d "$USER_HOME/.local/share/blesh" ]; then
         echo -e "  ${DIM}ble.sh:${NC} $USER_HOME/.local/share/blesh"
     fi
     echo -e "  ${DIM}Log file:${NC} $LOG_FILE"
-    echo
     echo -e "${YELLOW}Please log out and log back in to apply all changes${NC}"
-    printf "%${TERM_WIDTH}s\n\n" | tr ' ' '━'
+    echo -e "${BOLD}${GREEN}╰──────────────────────────╯${NC}\n"
 }
 
 # Main execution flow
@@ -403,15 +428,42 @@ main() {
     print_banner
     check_root
     detect_os
+    
+    # Ask user to choose shell
+    echo -e "${CYAN}Select the shell to configure:${NC}"
+    echo -e "1) ${BOLD}Bash${NC} (with ble.sh)"
+    echo -e "2) ${BOLD}Zsh${NC} (with Oh My Zsh)\n"
+    read -p "Enter choice [1-2]: " shell_choice
+    case $shell_choice in
+        1)
+            SHELL_CHOICE="bash"
+            print_status "Shell Choice" "Bash"
+            ;;
+        2)
+            SHELL_CHOICE="zsh"
+            print_status "Shell Choice" "Zsh"
+            ;;
+        *)
+            print_status "Shell Choice" "FAIL"
+            echo -e "${RED}Invalid choice. Exiting.${NC}"
+            exit 1
+            ;;
+    esac
+    
     install_dependencies
-    install_oh_my_zsh
-    install_zsh_plugins
-    install_blesh
+    
+    if [ "$SHELL_CHOICE" = "zsh" ]; then
+        install_oh_my_zsh
+        install_zsh_plugins
+        configure_zsh
+        change_shell
+    else
+        install_blesh
+        configure_bash
+    fi
+    
     build_tools
     install_tools
-    change_shell
-    configure_zsh
-    configure_bash
     cleanup
     print_completion
 }
@@ -423,9 +475,9 @@ main() {
 
 if [ $? -eq 0 ]; then
     clear
-    echo -e "${GREEN} Installation completed successfully!${NC}"
-    echo -e "${YELLOW} Please log out and log back in to see the changes.${NC}"
+    echo -e "${GREEN}Installation completed successfully!${NC}"
+    echo -e "${YELLOW}Please log out and log back in to see the changes.${NC}"
     sleep 2
 else
-    echo -e "${RED} Installation encountered some issues. Please check the log file: $LOG_FILE${NC}"
+    echo -e "${RED}Installation encountered issues. Check log: $LOG_FILE${NC}"
 fi
