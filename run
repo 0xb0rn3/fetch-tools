@@ -101,19 +101,19 @@ detect_os() {
         PM="apt-get"
         PM_INSTALL="$PM install -y"
         PM_UPDATE="$PM update"
-        REQUIRED_PACKAGES="build-essential zsh git curl"
+        REQUIRED_PACKAGES="build-essential zsh git ttf-hanazono curl"
         OS="Debian"
     elif [ -f "/etc/arch-release" ]; then
         PM="pacman"
         PM_INSTALL="$PM -S --noconfirm"
         PM_UPDATE="$PM -Sy"
-        REQUIRED_PACKAGES="base-devel zsh git curl"
+        REQUIRED_PACKAGES="base-devel zsh ttf-hanazono git curl"
         OS="Arch"
     elif [ -f "/etc/redhat-release" ]; then
         PM="dnf"
         PM_INSTALL="$PM install -y"
         PM_UPDATE="$PM update -y"
-        REQUIRED_PACKAGES="gcc gcc-c++ make zsh git curl"
+        REQUIRED_PACKAGES="gcc gcc-c++ ttf-hanazono make zsh git curl"
         OS="RedHat"
     else
         print_status "OS Detection" "FAIL"
