@@ -58,7 +58,7 @@ configure_prompt() {
         WHITE=""
         RESET=""
     fi
-    PS1="${WHITE}[${BLUE}せんせい💀${USER}${WHITE}]-[${GREEN}\w${WHITE}]$ ${RESET}"
+    PS1="${WHITE}[${BLUE}せんせい💀${USER}${WHITE}]-[${GREEN}\w${WHITE}]λ ${RESET}"
 }
 
 # Apply prompt configuration
