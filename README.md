@@ -1,6 +1,4 @@
 # Fetch Tools
-![image](https://github.com/user-attachments/assets/30549fc1-8671-4564-88d5-6b16bf44b5ea)
-
 A collection of system information display tools with ASCII art for Linux systems.
 
 ## Features
