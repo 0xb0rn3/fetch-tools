@@ -91,6 +91,7 @@ alias l='ls -CF'
 alias cls='clear'
 alias term='clear'
 alias grep='grep --color=auto'
+alias itunes='wine .wine/drive_c/Program\ Files/iTunes/iTunes.exe'
 
 # Directory navigation
 alias ..='cd ..'
