@@ -1,4 +1,4 @@
-# Fetch Tools
+# Fetch Tools {ON GOING DEVELOPMENT
 A collection of system information display tools with ASCII art for Linux systems.
 
 ## Features
@@ -26,7 +26,7 @@ The following packages will be automatically installed if missing:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/q4n0/fetch-tools.git
+git clone https://github.com/0xbrn3/fetch-tools.git
 cd fetch-tools
 chmod +x run
 ```
