@@ -1,4 +1,4 @@
-# Fetch Tools {ON GOING DEVELOPMENT
+# Fetch Tools {ON GOING DEVELOPMENT}
 A collection of system information display tools with ASCII art for Linux systems.
 
 ## Features
