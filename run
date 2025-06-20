@@ -1,54 +1,12 @@
 #!/usr/bin/env bash
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Shell Configuration Script
-# Customize.zshrc and .bashrc files across Linux distributions
+# Shell Configuration Script - Fixed Version
+# Customize .zshrc and .bashrc files across Linux distributions
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Color palette for enhanced visual experience
-declare -A COLORS=(
-    [RESET]='\033[0m'
-    [BOLD]='\033[1m'
-    [DIM]='\033[2m'
-    [ITALIC]='\033[3m'
-    [UNDERLINE]='\033[4m'
-    [BLINK]='\033[5m'
-    [REVERSE]='\033[7m'
-    [STRIKETHROUGH]='\033[9m'
-    
-    # Standard colors
-    [BLACK]='\033[30m'
-    [RED]='\033[31m'
-    [GREEN]='\033[32m'
-    [YELLOW]='\033[33m'
-    [BLUE]='\033[34m'
-    [MAGENTA]='\033[35m'
-    [CYAN]='\033[36m'
-    [WHITE]='\033[37m'
-    
-    # Bright colors
-    [BRIGHT_BLACK]='\033[90m'
-    [BRIGHT_RED]='\033[91m'
-    [BRIGHT_GREEN]='\033[92m'
-    [BRIGHT_YELLOW]='\033[93m'
-    [BRIGHT_BLUE]='\033[94m'
-    [BRIGHT_MAGENTA]='\033[95m'
-    [BRIGHT_CYAN]='\033[96m'
-    [BRIGHT_WHITE]='\033[97m'
-    
-    # Background colors
-    [BG_BLACK]='\033[40m'
-    [BG_RED]='\033[41m'
-    [BG_GREEN]='\033[42m'
-    [BG_YELLOW]='\033[43m'
-    [BG_BLUE]='\033[44m'
-    [BG_MAGENTA]='\033[45m'
-    [BG_CYAN]='\033[46m'
-    [BG_WHITE]='\033[47m'
-)
-
 # Configuration constants
-readonly SCRIPT_VERSION="0.0.3"
+readonly SCRIPT_VERSION="0.0.4"
 readonly SCRIPT_NAME="Shell Configuration Tool"
 readonly TEMPLATES_DIR="templates"
 readonly LOG_FILE="/tmp/shell_config_$(date +%Y%m%d_%H%M%S).log"
@@ -59,54 +17,111 @@ TERM_HEIGHT=$(tput lines 2>/dev/null || echo 24)
 CURRENT_USER="${SUDO_USER:-$USER}"
 USER_HOME=$(eval echo "~$CURRENT_USER")
 
+# Color codes - using simple variables instead of associative arrays for better compatibility
+readonly COLOR_RESET='\033[0m'
+readonly COLOR_BOLD='\033[1m'
+readonly COLOR_DIM='\033[2m'
+readonly COLOR_ITALIC='\033[3m'
+readonly COLOR_UNDERLINE='\033[4m'
+
+# Standard colors
+readonly COLOR_BLACK='\033[30m'
+readonly COLOR_RED='\033[31m'
+readonly COLOR_GREEN='\033[32m'
+readonly COLOR_YELLOW='\033[33m'
+readonly COLOR_BLUE='\033[34m'
+readonly COLOR_MAGENTA='\033[35m'
+readonly COLOR_CYAN='\033[36m'
+readonly COLOR_WHITE='\033[37m'
+
+# Bright colors
+readonly COLOR_BRIGHT_BLACK='\033[90m'
+readonly COLOR_BRIGHT_RED='\033[91m'
+readonly COLOR_BRIGHT_GREEN='\033[92m'
+readonly COLOR_BRIGHT_YELLOW='\033[93m'
+readonly COLOR_BRIGHT_BLUE='\033[94m'
+readonly COLOR_BRIGHT_MAGENTA='\033[95m'
+readonly COLOR_BRIGHT_CYAN='\033[96m'
+readonly COLOR_BRIGHT_WHITE='\033[97m'
+
 # Unicode symbols for better visual appeal
-readonly SYMBOLS=(
-    [CHECK]="✓"
-    [CROSS]="✗"
-    [WARNING]="⚠"
-    [INFO]="ℹ"
-    [ARROW]="→"
-    [BULLET]="●"
-    [STAR]="★"
-    [HEART]="♥"
-    [DIAMOND]="♦"
-    [SPADE]="♠"
-    [CLUB]="♣"
-    [NOTE]="♪"
-    [GEAR]="⚙"
-    [ROCKET]="🚀"
-    [FIRE]="🔥"
-    [LIGHTNING]="⚡"
-    [SPARKLES]="✨"
-)
+readonly SYMBOL_CHECK="✓"
+readonly SYMBOL_CROSS="✗"
+readonly SYMBOL_WARNING="⚠"
+readonly SYMBOL_INFO="ℹ"
+readonly SYMBOL_ARROW="→"
+readonly SYMBOL_BULLET="●"
+readonly SYMBOL_DIAMOND="♦"
+readonly SYMBOL_ROCKET="🚀"
+readonly SYMBOL_SPARKLES="✨"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# UTILITY FUNCTIONS - Building blocks for our enhanced interface
+# UTILITY FUNCTIONS - Enhanced and more compatible versions
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Enhanced color printing function with multiple style support
+# Function to get color code by name - replaces associative array lookup
+get_color_code() {
+    local color_name="$1"
+    case "$color_name" in
+        "RESET") echo "$COLOR_RESET" ;;
+        "BOLD") echo "$COLOR_BOLD" ;;
+        "DIM") echo "$COLOR_DIM" ;;
+        "ITALIC") echo "$COLOR_ITALIC" ;;
+        "UNDERLINE") echo "$COLOR_UNDERLINE" ;;
+        "BLACK") echo "$COLOR_BLACK" ;;
+        "RED") echo "$COLOR_RED" ;;
+        "GREEN") echo "$COLOR_GREEN" ;;
+        "YELLOW") echo "$COLOR_YELLOW" ;;
+        "BLUE") echo "$COLOR_BLUE" ;;
+        "MAGENTA") echo "$COLOR_MAGENTA" ;;
+        "CYAN") echo "$COLOR_CYAN" ;;
+        "WHITE") echo "$COLOR_WHITE" ;;
+        "BRIGHT_BLACK") echo "$COLOR_BRIGHT_BLACK" ;;
+        "BRIGHT_RED") echo "$COLOR_BRIGHT_RED" ;;
+        "BRIGHT_GREEN") echo "$COLOR_BRIGHT_GREEN" ;;
+        "BRIGHT_YELLOW") echo "$COLOR_BRIGHT_YELLOW" ;;
+        "BRIGHT_BLUE") echo "$COLOR_BRIGHT_BLUE" ;;
+        "BRIGHT_MAGENTA") echo "$COLOR_BRIGHT_MAGENTA" ;;
+        "BRIGHT_CYAN") echo "$COLOR_BRIGHT_CYAN" ;;
+        "BRIGHT_WHITE") echo "$COLOR_BRIGHT_WHITE" ;;
+        *) echo "$COLOR_WHITE" ;;  # Default fallback
+    esac
+}
+
+# Function to get symbol by name - replaces associative array lookup
+get_symbol() {
+    local symbol_name="$1"
+    case "$symbol_name" in
+        "CHECK") echo "$SYMBOL_CHECK" ;;
+        "CROSS") echo "$SYMBOL_CROSS" ;;
+        "WARNING") echo "$SYMBOL_WARNING" ;;
+        "INFO") echo "$SYMBOL_INFO" ;;
+        "ARROW") echo "$SYMBOL_ARROW" ;;
+        "BULLET") echo "$SYMBOL_BULLET" ;;
+        "DIAMOND") echo "$SYMBOL_DIAMOND" ;;
+        "ROCKET") echo "$SYMBOL_ROCKET" ;;
+        "SPARKLES") echo "$SYMBOL_SPARKLES" ;;
+        *) echo "●" ;;  # Default fallback
+    esac
+}
+
+# Enhanced color printing function with better compatibility
 print_colored() {
     local text="$1"
     local color_key="$2"
     local style_key="${3:-}"
     
-    local color_code="${COLORS[$color_key]:-${COLORS[WHITE]}}"
-    local style_code="${COLORS[$style_key]:-}"
+    local color_code
+    local style_code
     
-    echo -e "${style_code}${color_code}${text}${COLORS[RESET]}"
-}
-
-# Create animated text effect for important messages
-animate_text() {
-    local text="$1"
-    local color="${2:-CYAN}"
-    local delay="${3:-0.05}"
+    color_code=$(get_color_code "$color_key")
+    if [[ -n "$style_key" ]]; then
+        style_code=$(get_color_code "$style_key")
+    else
+        style_code=""
+    fi
     
-    for ((i=0; i<${#text}; i++)); do
-        echo -ne "${COLORS[$color]}${text:$i:1}${COLORS[RESET]}"
-        sleep "$delay"
-    done
-    echo
+    echo -e "${style_code}${color_code}${text}${COLOR_RESET}"
 }
 
 # Enhanced banner with dynamic width adjustment
@@ -117,7 +132,7 @@ print_banner() {
     
     echo
     print_colored "$(printf "%${banner_width}s" | tr ' ' '═')" "BRIGHT_CYAN" "BOLD"
-    print_colored "$(printf "%${padding}s")${SYMBOLS[ROCKET]} $SCRIPT_NAME ${SYMBOLS[ROCKET]}$(printf "%${padding}s")" "BRIGHT_WHITE" "BOLD"
+    print_colored "$(printf "%${padding}s")$(get_symbol "ROCKET") $SCRIPT_NAME $(get_symbol "ROCKET")$(printf "%${padding}s")" "BRIGHT_WHITE" "BOLD"
     print_colored "$(printf "%${padding}s")Enhanced Shell Configuration$(printf "%${padding}s")" "BRIGHT_YELLOW"
     print_colored "$(printf "%${padding}s")Version $SCRIPT_VERSION$(printf "%${padding}s")" "BRIGHT_GREEN" "DIM"
     print_colored "$(printf "%${banner_width}s" | tr ' ' '═')" "BRIGHT_CYAN" "BOLD"
@@ -133,57 +148,39 @@ print_status() {
     local icon color
     case "$status" in
         "SUCCESS"|"OK")
-            icon="${SYMBOLS[CHECK]}"
+            icon=$(get_symbol "CHECK")
             color="BRIGHT_GREEN"
             ;;
         "ERROR"|"FAIL")
-            icon="${SYMBOLS[CROSS]}"
+            icon=$(get_symbol "CROSS")
             color="BRIGHT_RED"
             ;;
         "WARNING"|"WARN")
-            icon="${SYMBOLS[WARNING]}"
+            icon=$(get_symbol "WARNING")
             color="BRIGHT_YELLOW"
             ;;
         "INFO")
-            icon="${SYMBOLS[INFO]}"
+            icon=$(get_symbol "INFO")
             color="BRIGHT_BLUE"
             ;;
         "SKIP")
-            icon="${SYMBOLS[ARROW]}"
+            icon=$(get_symbol "ARROW")
             color="BRIGHT_BLACK"
             ;;
         *)
-            icon="${SYMBOLS[BULLET]}"
+            icon=$(get_symbol "BULLET")
             color="WHITE"
             ;;
     esac
     
-    printf "  ${COLORS[$color]}%s${COLORS[RESET]} %-40s" "$icon" "$message"
+    local color_code
+    color_code=$(get_color_code "$color")
+    
+    printf "  ${color_code}%s${COLOR_RESET} %-40s" "$icon" "$message"
     
     if [[ -n "$detail" ]]; then
         print_colored "$detail" "DIM"
     else
-        echo
-    fi
-}
-
-# Animated progress bar for long operations
-show_progress() {
-    local current="$1"
-    local total="$2"
-    local message="${3:-Processing}"
-    local bar_width=30
-    
-    local percentage=$((current * 100 / total))
-    local filled=$((current * bar_width / total))
-    local empty=$((bar_width - filled))
-    
-    printf "\r  ${COLORS[BRIGHT_CYAN]}%s${COLORS[RESET]} [" "$message"
-    printf "%${filled}s" | tr ' ' '█'
-    printf "%${empty}s" | tr ' ' '░'
-    printf "] %3d%%" "$percentage"
-    
-    if [[ "$current" -eq "$total" ]]; then
         echo
     fi
 }
@@ -196,7 +193,7 @@ print_section() {
     local padding=$(((width - title_len - 4) / 2))
     
     echo
-    print_colored "$(printf "%${padding}s")${SYMBOLS[DIAMOND]} $title ${SYMBOLS[DIAMOND]}$(printf "%${padding}s")" "BRIGHT_MAGENTA" "BOLD"
+    print_colored "$(printf "%${padding}s")$(get_symbol "DIAMOND") $title $(get_symbol "DIAMOND")$(printf "%${padding}s")" "BRIGHT_MAGENTA" "BOLD"
     print_colored "$(printf "%${width}s" | tr ' ' '─')" "MAGENTA"
 }
 
@@ -241,7 +238,7 @@ confirm_action() {
     local default="${2:-n}"
     local choice
     
-    print_colored "${SYMBOLS[WARNING]} $message" "BRIGHT_YELLOW" "BOLD"
+    print_colored "$(get_symbol "WARNING") $message" "BRIGHT_YELLOW" "BOLD"
     
     if [[ "$default" == "y" ]]; then
         print_colored "Continue? (Y/n): " "BRIGHT_WHITE"
@@ -503,7 +500,7 @@ select_shell_configuration() {
 show_completion_summary() {
     print_section "Configuration Complete"
     
-    print_colored "${SYMBOLS[SPARKLES]} Successfully configured shell environment!" "BRIGHT_GREEN" "BOLD"
+    print_colored "$(get_symbol "SPARKLES") Successfully configured shell environment!" "BRIGHT_GREEN" "BOLD"
     echo
     
     print_status "Configuration Files" "INFO" "Updated in $USER_HOME"
@@ -511,7 +508,7 @@ show_completion_summary() {
     print_status "Log File" "INFO" "$LOG_FILE"
     
     echo
-    print_colored "${SYMBOLS[WARNING]} Important: Please restart your terminal or run 'source ~/.bashrc' or 'source ~/.zshrc' to apply changes." "BRIGHT_YELLOW" "BOLD"
+    print_colored "$(get_symbol "WARNING") Important: Please restart your terminal or run 'source ~/.bashrc' or 'source ~/.zshrc' to apply changes." "BRIGHT_YELLOW" "BOLD"
     echo
 }
 
