@@ -36,34 +36,7 @@ chmod +x run
 sudo ./run
 ```
 
-## Usage
 
-After installation, you can use either:
-
-```bash
-dragon-fetch    # For dragon style display
-sys-fetch      # For alternative style display
-```
-
-## Command Integration
-
-To automatically run either fetch tool when opening a new terminal:
-1. Add either of these lines to your ~/.zshrc:
-```bash
-dragon-fetch
-# or
-sys-fetch
-```
-
-## Building from Source
-
-If you prefer to build manually:
-
-```bash
-make clean
-make
-sudo make install
-```
 ## OPTIONAL!!
 
 If youd like to modify your zshrc use my .zshrc file copy past to (~/.)
