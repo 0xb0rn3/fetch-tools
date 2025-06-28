@@ -67,7 +67,7 @@ zstyle ':completion:*' use-cache yes
 zstyle ':completion:*' cache-path ~/.cache/zsh-completions
 configure_prompt() {
     autoload -U colors && colors
-    PROMPT="%{$fg[white]%}[%{$fg[blue]%}せんせい💀${USER}%{$fg[white]%}]-[%{$fg[green]%}%~%{$fg[white]%}]λ %{$reset_color%}"
+    PROMPT="%{$fg[white]%}[%{$fg[blue]%}シェルショック💀${USER}%{$fg[white]%}]-[%{$fg[green]%}%~%{$fg[white]%}]λ %{$reset_color%}"
 }
 
 # Apply prompt configuration
