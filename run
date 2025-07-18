@@ -16,7 +16,7 @@ GRAY='\033[0;90m'
 NC='\033[0m'
 
 # Configuration variables
-VERSION="0.0.2"
+VERSION="1.0.0"
 INSTALL_DIR="/usr/bin"
 BUILD_DIR="build"
 LOG_FILE="/tmp/fetch_install_$(date +%Y%m%d_%H%M%S).log"
@@ -24,6 +24,7 @@ TERM_WIDTH=$(tput cols)
 CURRENT_USER=$SUDO_USER
 USER_HOME=$(getent passwd $SUDO_USER | cut -d: -f6)
 ZSH_CUSTOM="$USER_HOME/.oh-my-zsh/custom"
+SRC_DIR=".src"
 
 # Display the application banner with rounded corners
 print_banner() {
@@ -33,7 +34,9 @@ print_banner() {
     echo -e "${BOLD}${BLUE}"
     echo '╭───────────────────────────────╮'
     echo '│       FETCH TOOLS             │'
-    echo '│  System Info Display Suite    │'
+    echo '│  Modern System Info Display   │'
+    echo '│                               │'
+    echo '│  By: 0xb0rn3 | 0xbv1         │'
     echo '╰───────────────────────────────╯'
     echo -e "${NC}"
     echo -e "${BOLD}${PURPLE}    Setup & Configuration Tool${NC}"
@@ -91,6 +94,31 @@ check_root() {
         exit 1
     fi
     print_status "Privilege Check" "OK"
+}
+
+# Check if source files exist
+check_source_files() {
+    print_section "Source File Verification"
+    
+    if [ ! -f "$SRC_DIR/fetch.c" ]; then
+        print_status "fetch.c Source" "FAIL"
+        echo -e "${RED}fetch.c not found in $SRC_DIR directory${NC}"
+        exit 1
+    fi
+    
+    if [ ! -f "$SRC_DIR/templates/zshrc.template" ]; then
+        print_status "Zsh Template" "FAIL"
+        echo -e "${RED}zshrc.template not found in $SRC_DIR/templates${NC}"
+        exit 1
+    fi
+    
+    if [ ! -f "$SRC_DIR/templates/bashrc.template" ]; then
+        print_status "Bash Template" "FAIL"
+        echo -e "${RED}bashrc.template not found in $SRC_DIR/templates${NC}"
+        exit 1
+    fi
+    
+    print_status "Source Files" "OK"
 }
 
 # Detect operating system and set package manager
@@ -224,17 +252,27 @@ install_blesh() {
 }
 
 # Build fetch tools from source
-build_tools() {
-    print_section "Building Fetch Tools"
+build_fetch_tool() {
+    print_section "Building Fetch Tool"
     
-    mkdir -p $BUILD_DIR
-    make clean >/dev/null 2>&1
+    if [ ! -d "$BUILD_DIR" ]; then
+        mkdir -p $BUILD_DIR
+    fi
     
-    (make >/dev/null 2>&1) &
-    show_spinner $! "Compiling fetch tools"
+    # Compile the fetch.c source code
+    (gcc -o $BUILD_DIR/fetch $SRC_DIR/fetch.c >/dev/null 2>&1) &
+    show_spinner $! "Compiling fetch tool"
     
     if [ $? -ne 0 ]; then
         print_status "Build Process" "FAIL"
+        echo -e "${RED}Failed to compile fetch.c${NC}"
+        exit 1
+    fi
+    
+    # Check if binary was created
+    if [ ! -f "$BUILD_DIR/fetch" ]; then
+        print_status "Binary Check" "FAIL"
+        echo -e "${RED}Fetch binary not found after compilation${NC}"
         exit 1
     fi
     
@@ -242,15 +280,25 @@ build_tools() {
 }
 
 # Install built tools
-install_tools() {
-    print_section "Installing Fetch Tools"
+install_fetch_tool() {
+    print_section "Installing Fetch Tool"
     
-    (
-        install -m 755 $BUILD_DIR/dragon-fetch $INSTALL_DIR/
-        install -m 755 $BUILD_DIR/anime-fetch $INSTALL_DIR/
-    ) &
-    show_spinner $! "Installing binaries"
-    print_status "Installation" "OK"
+    if [ ! -f "$BUILD_DIR/fetch" ]; then
+        print_status "Binary Not Found" "FAIL"
+        echo -e "${RED}Fetch binary not found. Build failed?${NC}"
+        exit 1
+    fi
+    
+    (install -m 755 $BUILD_DIR/fetch $INSTALL_DIR/) &
+    show_spinner $! "Installing fetch binary"
+    
+    if [ -f "$INSTALL_DIR/fetch" ]; then
+        print_status "Installation" "OK"
+    else
+        print_status "Installation" "FAIL"
+        echo -e "${RED}Failed to install fetch binary${NC}"
+        exit 1
+    fi
 }
 
 # Configure Zsh settings
@@ -263,34 +311,19 @@ configure_zsh() {
         cp "$zshrc" "$zshrc.backup.$(date +%Y%m%d_%H%M%S)"
     fi
     
-    cat templates/zshrc.template > "$zshrc"
+    cat $SRC_DIR/templates/zshrc.template > "$zshrc"
+    
+    # Add fetch to the end of zshrc
+    echo "" >> "$zshrc"
+    echo "# Fetch tool integration" >> "$zshrc"
+    echo "if command -v fetch >/dev/null 2>&1; then" >> "$zshrc"
+    echo "    fetch" >> "$zshrc"
+    echo "fi" >> "$zshrc"
+    
     chown $SUDO_USER:$SUDO_USER "$zshrc"
     chmod 644 "$zshrc"
     
-    echo -e "${CYAN}Select default fetch tool for ZSH:${NC}"
-    echo -e "1) ${RED}Dragon Fetch${NC}  - Dragon style system info"
-    echo -e "2) ${BLUE}Anime Fetch${NC}   - Anime style system info"
-    echo -e "3) ${GRAY}None${NC}         - Don't set a default\n"
-    
-    read -p "Enter choice [1-3]: " choice
-    
-    case $choice in
-        1)
-            echo 'command -v dragon-fetch >/dev/null && dragon-fetch' >> "$zshrc"
-            print_status "Default Tool (ZSH)" "Dragon Fetch"
-            ;;
-        2)
-            echo 'command -v anime-fetch >/dev/null && anime-fetch' >> "$zshrc"
-            print_status "Default Tool (ZSH)" "Anime Fetch"
-            ;;
-        3)
-            print_status "Default Tool (ZSH)" "None"
-            ;;
-        *)
-            print_status "Default Tool (ZSH)" "WARN"
-            echo -e "${YELLOW}Invalid choice. No default set.${NC}"
-            ;;
-    esac
+    print_status "ZSH Configuration" "OK"
 }
 
 # Configure Bash settings
@@ -303,7 +336,7 @@ configure_bash() {
         cp "$bashrc" "$bashrc.backup.$(date +%Y%m%d_%H%M%S)"
     fi
     
-    cat templates/bashrc.template > "$bashrc"
+    cat $SRC_DIR/templates/bashrc.template > "$bashrc"
     
     # Add ble.sh to bashrc if installed
     if [ -d "$USER_HOME/.local/share/blesh" ]; then
@@ -311,33 +344,17 @@ configure_bash() {
         echo "source $USER_HOME/.local/share/blesh/ble.sh" >> "$bashrc"
     fi
     
+    # Add fetch to the end of bashrc
+    echo "" >> "$bashrc"
+    echo "# Fetch tool integration" >> "$bashrc"
+    echo "if command -v fetch >/dev/null 2>&1; then" >> "$bashrc"
+    echo "    fetch" >> "$bashrc"
+    echo "fi" >> "$bashrc"
+    
     chown $SUDO_USER:$SUDO_USER "$bashrc"
     chmod 644 "$bashrc"
     
-    echo -e "${CYAN}Select default fetch tool for BASH:${NC}"
-    echo -e "1) ${RED}Dragon Fetch${NC}  - Dragon style system info"
-    echo -e "2) ${BLUE}Anime Fetch${NC}   - Anime style system info"
-    echo -e "3) ${GRAY}None${NC}         - Don't set a default\n"
-    
-    read -p "Enter choice [1-3]: " choice
-    
-    case $choice in
-        1)
-            echo 'command -v dragon-fetch >/dev/null && dragon-fetch' >> "$bashrc"
-            print_status "Default Tool (BASH)" "Dragon Fetch"
-            ;;
-        2)
-            echo 'command -v anime-fetch >/dev/null && anime-fetch' >> "$bashrc"
-            print_status "Default Tool (BASH)" "Anime Fetch"
-            ;;
-        3)
-            print_status "Default Tool (BASH)" "None"
-            ;;
-        *)
-            print_status "Default Tool (BASH)" "WARN"
-            echo -e "${YELLOW}Invalid choice. No default set.${NC}"
-            ;;
-    esac
+    print_status "BASH Configuration" "OK"
 }
 
 # Handle shell changing functionality
@@ -405,11 +422,10 @@ cleanup() {
 print_completion() {
     echo -e "\n${BOLD}${GREEN}╭─ Installation Complete! ─╮${NC}"
     echo -e "${BOLD}${WHITE}Available commands:${NC}"
-    echo -e "  ${CYAN}dragon-fetch${NC}  - Dragon-style system info"
-    echo -e "  ${CYAN}anime-fetch${NC}   - Anime-style system info"
+    echo -e "  ${CYAN}fetch${NC}  - Modern system info display"
     echo
     echo -e "${BOLD}${WHITE}Locations:${NC}"
-    echo -e "  ${DIM}Installation:${NC} $INSTALL_DIR"
+    echo -e "  ${DIM}Installation:${NC} $INSTALL_DIR/fetch"
     if [ "$SHELL_CHOICE" = "zsh" ]; then
         echo -e "  ${DIM}ZSH Configuration:${NC} $USER_HOME/.zshrc"
     else
@@ -419,6 +435,8 @@ print_completion() {
         echo -e "  ${DIM}ble.sh:${NC} $USER_HOME/.local/share/blesh"
     fi
     echo -e "  ${DIM}Log file:${NC} $LOG_FILE"
+    echo
+    echo -e "${BOLD}${WHITE}Author:${NC} ${CYAN}0xb0rn3 | 0xbv1${NC}"
     echo -e "${YELLOW}Please log out and log back in to apply all changes${NC}"
     echo -e "${BOLD}${GREEN}╰──────────────────────────╯${NC}\n"
 }
@@ -427,6 +445,7 @@ print_completion() {
 main() {
     print_banner
     check_root
+    check_source_files
     detect_os
     
     # Ask user to choose shell
@@ -451,6 +470,8 @@ main() {
     esac
     
     install_dependencies
+    build_fetch_tool
+    install_fetch_tool
     
     if [ "$SHELL_CHOICE" = "zsh" ]; then
         install_oh_my_zsh
@@ -462,8 +483,6 @@ main() {
         configure_bash
     fi
     
-    build_tools
-    install_tools
     cleanup
     print_completion
 }
@@ -476,6 +495,7 @@ main() {
 if [ $? -eq 0 ]; then
     clear
     echo -e "${GREEN}Installation completed successfully!${NC}"
+    echo -e "${CYAN}Run 'fetch' to see your system information${NC}"
     echo -e "${YELLOW}Please log out and log back in to see the changes.${NC}"
     sleep 2
 else
