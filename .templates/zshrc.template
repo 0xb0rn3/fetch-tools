@@ -1,0 +1,129 @@
+# Path to your oh-my-zsh installation
+export ZSH="$HOME/.oh-my-zsh"
+
+# Plugin list
+plugins=(
+  git
+  colored-man-pages
+  command-not-found
+  extract
+  sudo
+  history
+  dirhistory
+  copypath
+  copyfile
+  web-search
+  urltools
+  zsh-syntax-highlighting
+  zsh-autosuggestions
+)
+
+# Source oh-my-zsh
+source $ZSH/oh-my-zsh.sh
+
+# Enable features and set options
+setopt autocd              
+setopt interactivecomments 
+setopt magicequalsubst     
+setopt nonomatch           
+setopt notify             
+setopt numericglobsort     
+setopt promptsubst         
+
+# Hide EOL sign ('%')
+PROMPT_EOL_MARK=""
+
+# Configure key bindings
+bindkey -e                                        
+bindkey ' ' magic-space                           
+bindkey '^U' backward-kill-line                   
+bindkey '^[[3;5~' kill-word                      
+bindkey '^[[3~' delete-char                       
+bindkey '^[[1;5C' forward-word                    
+bindkey '^[[1;5D' backward-word                   
+bindkey '^[[5~' beginning-of-buffer-or-history    
+bindkey '^[[6~' end-of-buffer-or-history          
+bindkey '^[[H' beginning-of-line                  
+bindkey '^[[F' end-of-line                        
+bindkey '^[[Z' undo                               
+
+# Enable completion features
+autoload -Uz compinit
+compinit -d ~/.cache/zcompdump
+
+# Configure completion styles
+zstyle ':completion:*' menu select
+zstyle ':completion:*' auto-description 'specify: %d'
+zstyle ':completion:*' completer _expand _complete
+zstyle ':completion:*' format 'Completing %d'
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*' list-colors ''
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+zstyle ':completion:*' rehash true
+zstyle ':completion:*' verbose true
+zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
+zstyle ':completion:*:*:*:*:*' menu select=2
+zstyle ':completion:*' use-cache yes
+zstyle ':completion:*' cache-path ~/.cache/zsh-completions
+configure_prompt() {
+    autoload -U colors && colors
+    PROMPT="%{$fg[white]%}[%{$fg[blue]%}シェルショック💀${USER}%{$fg[white]%}]-[%{$fg[green]%}%~%{$fg[white]%}]λ %{$reset_color%}"
+}
+
+# Apply prompt configuration
+configure_prompt
+
+# History configurations
+HISTFILE=~/.zsh_history
+HISTSIZE=1000
+SAVEHIST=2000
+setopt hist_expire_dups_first
+setopt hist_ignore_dups       
+setopt hist_ignore_space      
+setopt hist_verify            
+setopt share_history          
+
+# Basic system aliases
+alias ls='ls --color=auto'
+alias ll='ls -l'
+alias la='ls -A'
+alias l='ls -CF'
+alias cls='clear'
+alias term='clear'
+alias grep='grep --color=auto'
+alias itunes='wine .wine/drive_c/Program\ Files/iTunes/iTunes.exe'
+
+# Directory navigation
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+
+# System information
+alias df='df -h'
+alias free='free -m'
+alias myip='curl ifconfig.me'
+alias ports='netstat -tulanp'
+
+# Add color to man pages
+export LESS_TERMCAP_mb=$'\E[1;31m'
+export LESS_TERMCAP_md=$'\E[1;36m'
+export LESS_TERMCAP_me=$'\E[0m'
+export LESS_TERMCAP_so=$'\E[01;44;33m'
+export LESS_TERMCAP_se=$'\E[0m'
+export LESS_TERMCAP_us=$'\E[1;32m'
+export LESS_TERMCAP_ue=$'\E[0m'
+
+# Colored GCC warnings and errors
+export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+
+# Custom functions
+function http-server() {
+    python3 -m http.server
+}
+
+function term() {
+    clear
+}
+
+# Created by `pipx` on 2025-03-26 20:42:53
+export PATH="$PATH:/home/0xb3/.local/bin"
