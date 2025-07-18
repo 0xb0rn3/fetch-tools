@@ -16,214 +16,182 @@ WHITE='\033[1;37m'
 GRAY='\033[0;90m'
 LIGHT_GRAY='\033[0;37m'
 DARK_GRAY='\033[1;30m'
-LIGHT_RED='\033[0;31m'
-LIGHT_GREEN='\033[0;32m'
-LIGHT_BLUE='\033[0;34m'
+BRIGHT_RED='\033[91m'
+BRIGHT_GREEN='\033[92m'
+BRIGHT_YELLOW='\033[93m'
+BRIGHT_BLUE='\033[94m'
+BRIGHT_PURPLE='\033[95m'
+BRIGHT_CYAN='\033[96m'
 NC='\033[0m'
 
-# Enhanced color gradients
-GRADIENT_1='\033[38;5;196m'  # Bright Red
-GRADIENT_2='\033[38;5;202m'  # Orange
-GRADIENT_3='\033[38;5;208m'  # Dark Orange
-GRADIENT_4='\033[38;5;214m'  # Gold
-GRADIENT_5='\033[38;5;220m'  # Yellow
-GRADIENT_6='\033[38;5;226m'  # Bright Yellow
-
 # Configuration variables
-VERSION="1.0.1"
+VERSION="1.0.0"
 INSTALL_DIR="/usr/bin"
 LOG_FILE="/tmp/fetch_install_$(date +%Y%m%d_%H%M%S).log"
 TERM_WIDTH=$(tput cols 2>/dev/null || echo 80)
-CURRENT_USER=$SUDO_USER
-USER_HOME=$(getent passwd $SUDO_USER 2>/dev/null | cut -d: -f6)
+CURRENT_USER=${SUDO_USER:-$USER}
+USER_HOME=$(getent passwd $CURRENT_USER 2>/dev/null | cut -d: -f6 || echo $HOME)
 ZSH_CUSTOM="$USER_HOME/.oh-my-zsh/custom"
 FETCH_SOURCE=".src/fetch.c"
 
-# Enhanced banner with better visual appeal
+# Enhanced display functions with better animations
+print_animated_border() {
+    local char="$1"
+    local color="$2"
+    local delay="$3"
+    
+    echo -ne "$color"
+    for (( i=0; i<$TERM_WIDTH; i++ )); do
+        echo -ne "$char"
+        sleep $delay
+    done
+    echo -e "$NC"
+}
+
+# Enhanced banner with gradient effect
 print_banner() {
     clear
     echo
-    # Top border with gradient effect
-    printf "${GRADIENT_1}%${TERM_WIDTH}s${NC}\n" | tr ' ' '═'
     
-    # Main banner with enhanced styling
-    echo -e "${BOLD}${GRADIENT_2}"
-    echo '    ╔══════════════════════════════════════╗'
-    echo '    ║           🚀 FETCH TOOLS             ║'
-    echo '    ║      System Info Display Suite       ║'
-    echo '    ║                                      ║'
-    echo -e "    ║       ${GRADIENT_4}by 0xb0rn3 ${GRADIENT_2}|${GRADIENT_5} 0xbv1${GRADIENT_2}        ║"
-    echo '    ╚══════════════════════════════════════╝'
+    # Top border with animation
+    print_animated_border "═" "$BRIGHT_CYAN" 0.005
+    
+    echo -e "${BOLD}${BRIGHT_BLUE}"
+    echo '    ╔═══════════════════════════════════════════════════════╗'
+    echo '    ║                                                       ║'
+    echo '    ║        🚀 FETCH TOOLS INSTALLER 🚀                   ║'
+    echo '    ║                                                       ║'
+    echo '    ║         System Info Display Suite                     ║'
+    echo '    ║                                                       ║'
+    echo '    ║            by 0xb0rn3 | 0xbv1                        ║'
+    echo '    ║                                                       ║'
+    echo '    ╚═══════════════════════════════════════════════════════╝'
     echo -e "${NC}"
     
-    # Version and subtitle with enhanced styling
-    echo -e "${BOLD}${GRADIENT_3}    ⚡ Setup & Configuration Tool ⚡${NC}"
-    echo -e "${DIM}${GRADIENT_4}         Version $VERSION - ${BLINK}${GRADIENT_6}LATEST${NC}${DIM}${GRADIENT_4}${NC}"
+    echo -e "${BOLD}${BRIGHT_PURPLE}                 ✨ Setup & Configuration Tool ✨${NC}"
+    echo -e "${DIM}${BRIGHT_CYAN}                    Version $VERSION - LATEST${NC}"
     
-    # Bottom border
-    printf "${GRADIENT_1}%${TERM_WIDTH}s${NC}\n" | tr ' ' '═'
+    # Bottom border with animation
+    print_animated_border "═" "$BRIGHT_CYAN" 0.005
     echo
 }
 
-# Enhanced status printing with better icons and colors
+# Enhanced status messages with better icons
 print_status() {
     local text="$1"
     local status="$2"
     local icon=""
     local color=""
     
-    printf "${ITALIC}${LIGHT_GRAY}%-45s${NC}" "$text"
-    
     case $status in
-        "OK")     
-            icon="✅"
-            color="${GREEN}"
-            text_status="Done"
-            ;;
-        "FAIL")   
-            icon="❌"
-            color="${RED}"
-            text_status="Failed"
-            ;;
-        "WARN")   
-            icon="⚠️ "
-            color="${YELLOW}"
-            text_status="Warning"
-            ;;
-        "INFO")   
-            icon="ℹ️ "
-            color="${BLUE}"
-            text_status="Info"
-            ;;
-        "SKIP")   
-            icon="⏭️ "
-            color="${GRAY}"
-            text_status="Skipped"
-            ;;
-        "SUDO")   
-            icon="🔐"
-            color="${PURPLE}"
-            text_status="Sudo Required"
-            ;;
-        "SECURITY")
-            icon="🛡️ "
-            color="${CYAN}"
-            text_status="Security Check"
-            ;;
-        *)        
-            icon="⚙️ "
-            color="${PURPLE}"
-            text_status="$status"
-            ;;
+        "OK")     icon="✅"; color="${BRIGHT_GREEN}" ;;
+        "FAIL")   icon="❌"; color="${BRIGHT_RED}" ;;
+        "WARN")   icon="⚠️ "; color="${BRIGHT_YELLOW}" ;;
+        "INFO")   icon="ℹ️ "; color="${BRIGHT_BLUE}" ;;
+        "SKIP")   icon="⏭️ "; color="${GRAY}" ;;
+        "SUDO")   icon="🔐"; color="${BRIGHT_PURPLE}" ;;
+        "DETECT") icon="🔍"; color="${BRIGHT_CYAN}" ;;
+        *)        icon="⚡"; color="${BRIGHT_PURPLE}" ;;
     esac
     
-    echo -e "${color}${icon} ${text_status}${NC}"
+    printf "${ITALIC}${WHITE}%-45s${NC}" "$text"
+    echo -e "${color}${icon} ${status}${NC}"
 }
 
-# Enhanced section headers with better visual separation
+# Enhanced section headers with better styling
 print_section() {
     local text="$1"
-    local section_width=$((${#text} + 8))
-    local border_char="─"
+    local padding=$(( (60 - ${#text}) / 2 ))
     
-    echo
-    printf "${BOLD}${CYAN}╭${NC}"
-    printf "${CYAN}%${section_width}s${NC}" | tr ' ' "$border_char"
-    printf "${BOLD}${CYAN}╮${NC}\n"
-    printf "${BOLD}${CYAN}│   ${WHITE}${text}${CYAN}   │${NC}\n"
-    printf "${BOLD}${CYAN}╰${NC}"
-    printf "${CYAN}%${section_width}s${NC}" | tr ' ' "$border_char"
-    printf "${BOLD}${CYAN}╯${NC}\n"
+    echo -e "\n${BOLD}${BRIGHT_CYAN}╭$(printf '%*s' $padding | tr ' ' '─')─ ${text} ─$(printf '%*s' $padding | tr ' ' '─')╮${NC}"
 }
 
-# Enhanced spinner with better animation
+# Enhanced progress spinner with more animations
 show_spinner() {
     local pid=$1
     local text="$2"
-    local spin='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
-    local colors=("${BLUE}" "${CYAN}" "${GREEN}" "${YELLOW}" "${PURPLE}")
+    local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+    local delay=0.1
     local i=0
-    local color_index=0
     
     while kill -0 $pid 2>/dev/null; do
-        i=$(( (i + 1) % 10 ))
-        color_index=$(( (color_index + 1) % 5 ))
-        printf "\r${ITALIC}${LIGHT_GRAY}%-45s${NC} ${colors[$color_index]}${spin:$i:1}${NC}" "$text"
-        sleep .1
+        printf "\r${ITALIC}${WHITE}%-45s${NC} ${BRIGHT_BLUE}${frames[i]}${NC} ${DIM}Working...${NC}"
+        i=$(( (i + 1) % ${#frames[@]} ))
+        sleep $delay
     done
-    printf "\r%-45s${GREEN}✅ Complete${NC}\n" "$text"
+    printf "\r${ITALIC}${WHITE}%-45s${NC} ${BRIGHT_GREEN}✅ Complete${NC}\n"
 }
 
-# Enhanced root and sudo privilege checking
-check_root() {
-    print_section "🔐 Security & Privilege Validation"
+# Enhanced sudo check with automatic elevation
+check_and_elevate_sudo() {
+    print_section "🔐 Privilege Verification"
     
-    # Check if running as root
     if [ "$EUID" -eq 0 ]; then
         if [ -z "$SUDO_USER" ]; then
-            print_status "Root User Detection" "FAIL"
-            echo -e "${RED}${BOLD}⚠️  SECURITY WARNING ⚠️${NC}"
-            echo -e "${RED}You are running as root directly!${NC}"
-            echo -e "${YELLOW}This script should be run with 'sudo' for security reasons.${NC}"
-            echo -e "${CYAN}Please run: ${WHITE}sudo $0${NC}"
-            echo -e "${DIM}Running as root directly can be dangerous and is not recommended.${NC}"
+            print_status "Root Detection" "WARN"
+            echo -e "${BRIGHT_YELLOW}⚠️  Running as root without sudo is not recommended!${NC}"
+            echo -e "${BRIGHT_CYAN}💡 For safety, please run with: ${BOLD}sudo $0${NC}"
+            echo -e "${BRIGHT_RED}❌ Exiting for security reasons...${NC}"
             exit 1
         else
-            print_status "Sudo Execution" "OK"
-            print_status "Original User: $SUDO_USER" "INFO"
+            print_status "Sudo Privileges" "OK"
+            print_status "Original User" "DETECT"
+            echo -e "${DIM}   Running as: ${BRIGHT_GREEN}$SUDO_USER${NC}"
+            return 0
         fi
-    else
-        print_status "Root Privileges" "FAIL"
-        echo -e "${RED}${BOLD}🔒 INSUFFICIENT PRIVILEGES${NC}"
-        echo -e "${RED}This script requires root privileges to install system packages.${NC}"
-        echo -e "${CYAN}Please run with sudo: ${WHITE}sudo $0${NC}"
-        echo -e "${DIM}Sudo is required for:${NC}"
-        echo -e "${DIM}  • Installing system packages${NC}"
-        echo -e "${DIM}  • Copying files to system directories${NC}"
-        echo -e "${DIM}  • Modifying system configurations${NC}"
+    fi
+    
+    # Not running as root, need to elevate
+    print_status "Current User" "INFO"
+    echo -e "${DIM}   Running as: ${BRIGHT_YELLOW}$USER${NC}"
+    
+    print_status "Privilege Level" "WARN"
+    echo -e "${BRIGHT_YELLOW}⚠️  This installer requires sudo privileges${NC}"
+    echo -e "${BRIGHT_CYAN}💡 Attempting to elevate privileges...${NC}"
+    echo
+    
+    # Check if sudo is available
+    if ! command -v sudo >/dev/null 2>&1; then
+        print_status "Sudo Command" "FAIL"
+        echo -e "${BRIGHT_RED}❌ sudo command not found!${NC}"
+        echo -e "${BRIGHT_CYAN}💡 Please install sudo or run as root${NC}"
         exit 1
     fi
     
-    # Validate sudo user exists and is valid
-    if [ -z "$SUDO_USER" ]; then
-        print_status "Sudo User Detection" "FAIL"
-        echo -e "${RED}Could not determine the original user.${NC}"
-        echo -e "${YELLOW}Please ensure you're running with 'sudo' and not as root.${NC}"
-        exit 1
+    # Check if user is in sudoers
+    if ! sudo -n true 2>/dev/null; then
+        print_status "Sudo Access" "SUDO"
+        echo -e "${BRIGHT_PURPLE}🔐 Please enter your password to continue:${NC}"
+        
+        # Test sudo access
+        if ! sudo -v; then
+            print_status "Authentication" "FAIL"
+            echo -e "${BRIGHT_RED}❌ Authentication failed or insufficient privileges${NC}"
+            echo -e "${BRIGHT_CYAN}💡 Please ensure you have sudo access${NC}"
+            exit 1
+        fi
     fi
     
-    # Check if sudo user's home directory exists
-    if [ ! -d "$USER_HOME" ]; then
-        print_status "User Home Directory" "FAIL"
-        echo -e "${RED}Home directory for user '$SUDO_USER' not found: $USER_HOME${NC}"
-        exit 1
-    fi
+    print_status "Sudo Verification" "OK"
+    echo -e "${BRIGHT_GREEN}✅ Privileges verified, re-executing with sudo...${NC}"
+    echo
     
-    # Verify sudo user has proper permissions
-    if ! id "$SUDO_USER" >/dev/null 2>&1; then
-        print_status "User Validation" "FAIL"
-        echo -e "${RED}User '$SUDO_USER' does not exist or is invalid.${NC}"
-        exit 1
-    fi
-    
-    print_status "User Validation" "OK"
-    print_status "Home Directory" "OK"
-    print_status "Security Check Complete" "SECURITY"
-    
-    # Display current environment info
-    echo -e "\n${BOLD}${CYAN}📋 Environment Information:${NC}"
-    echo -e "${DIM}  Original User: ${WHITE}$SUDO_USER${NC}"
-    echo -e "${DIM}  Home Directory: ${WHITE}$USER_HOME${NC}"
-    echo -e "${DIM}  Effective UID: ${WHITE}$EUID${NC}"
-    echo -e "${DIM}  Log File: ${WHITE}$LOG_FILE${NC}"
+    # Re-execute script with sudo
+    exec sudo "$0" "$@"
 }
 
-# Enhanced OS detection with better visual feedback
+# Enhanced OS detection with better formatting
 detect_os() {
     print_section "🖥️  System Detection"
     
-    # Create a small delay for dramatic effect
-    sleep 0.5
+    # Get system information
+    local os_name=$(uname -s)
+    local os_version=$(uname -r)
+    local architecture=$(uname -m)
+    
+    print_status "Operating System" "DETECT"
+    echo -e "${DIM}   Kernel: ${BRIGHT_CYAN}$os_name $os_version${NC}"
+    echo -e "${DIM}   Architecture: ${BRIGHT_CYAN}$architecture${NC}"
     
     if [ -f "/etc/debian_version" ]; then
         PM="apt-get"
@@ -231,34 +199,32 @@ detect_os() {
         PM_UPDATE="$PM update"
         REQUIRED_PACKAGES="build-essential gcc make zsh git fonts-noto-color-emoji ttf-hanazono curl"
         OS="Debian"
-        OS_ICON="🐧"
+        local distro=$(lsb_release -d 2>/dev/null | cut -f2 || cat /etc/debian_version)
     elif [ -f "/etc/arch-release" ]; then
         PM="pacman"
         PM_INSTALL="$PM -S --noconfirm"
         PM_UPDATE="$PM -Sy"
         REQUIRED_PACKAGES="base-devel gcc make zsh noto-fonts-emoji ttf-hanazono git curl"
         OS="Arch"
-        OS_ICON="🏹"
+        local distro=$(cat /etc/arch-release 2>/dev/null || echo "Arch Linux")
     elif [ -f "/etc/redhat-release" ]; then
         PM="dnf"
         PM_INSTALL="$PM install -y"
         PM_UPDATE="$PM update -y"
         REQUIRED_PACKAGES="gcc gcc-c++ make ttf-hanazono zsh git curl"
         OS="RedHat"
-        OS_ICON="🎩"
+        local distro=$(cat /etc/redhat-release 2>/dev/null || echo "Red Hat Linux")
     else
-        print_status "OS Detection" "FAIL"
-        echo -e "${RED}${BOLD}❌ Unsupported Distribution${NC}"
-        echo -e "${RED}This script supports:${NC}"
-        echo -e "${YELLOW}  • Debian/Ubuntu based systems${NC}"
-        echo -e "${YELLOW}  • Arch Linux based systems${NC}"
-        echo -e "${YELLOW}  • Red Hat based systems${NC}"
+        print_status "Distribution" "FAIL"
+        echo -e "${BRIGHT_RED}❌ Unsupported Linux distribution${NC}"
+        echo -e "${BRIGHT_CYAN}💡 This installer supports: Debian, Ubuntu, Arch, Red Hat${NC}"
         exit 1
     fi
     
-    print_status "OS Detection" "OK"
-    echo -e "${DIM}   Detected: ${OS_ICON} ${WHITE}$OS Linux${NC}"
-    echo -e "${DIM}   Package Manager: ${WHITE}$PM${NC}"
+    print_status "Distribution" "OK"
+    echo -e "${DIM}   Detected: ${BRIGHT_GREEN}$distro${NC}"
+    print_status "Package Manager" "DETECT"
+    echo -e "${DIM}   Using: ${BRIGHT_CYAN}$PM${NC}"
 }
 
 # Check if a package is installed
@@ -277,71 +243,78 @@ is_package_installed() {
     esac
 }
 
-# Enhanced dependency installation with better progress tracking
+# Enhanced dependency installation with better progress
 install_dependencies() {
     print_section "📦 Installing Dependencies"
     
-    echo -e "${DIM}Updating package database...${NC}"
+    echo -e "${BRIGHT_CYAN}🔄 Updating package database...${NC}"
     ($PM_UPDATE >/dev/null 2>&1) &
     show_spinner $! "Updating package manager"
     
+    local installed_count=0
+    local skipped_count=0
     local total_packages=$(echo $REQUIRED_PACKAGES | wc -w)
-    local current_package=0
     
     for package in $REQUIRED_PACKAGES; do
-        current_package=$((current_package + 1))
-        
         if is_package_installed $package; then
-            print_status "[$current_package/$total_packages] $package" "SKIP"
+            print_status "$package" "SKIP"
+            ((skipped_count++))
         else
-            echo -e "${DIM}Installing $package... ($current_package/$total_packages)${NC}"
+            echo -e "${BRIGHT_BLUE}📥 Installing $package...${NC}"
             ($PM_INSTALL $package >/dev/null 2>&1) &
             show_spinner $! "Installing $package"
+            ((installed_count++))
         fi
     done
     
-    echo -e "${GREEN}✅ All dependencies processed!${NC}"
+    echo -e "\n${BRIGHT_GREEN}📊 Installation Summary:${NC}"
+    echo -e "${DIM}   Total packages: ${BRIGHT_CYAN}$total_packages${NC}"
+    echo -e "${DIM}   Installed: ${BRIGHT_GREEN}$installed_count${NC}"
+    echo -e "${DIM}   Skipped: ${BRIGHT_YELLOW}$skipped_count${NC}"
 }
 
-# Compile fetch.c and install
+# Enhanced compilation with better error handling
 compile_and_install_fetch() {
-    print_section "⚙️  Compiling Fetch Tool"
+    print_section "🔨 Compiling Fetch Tool"
     
     if [ ! -f "$FETCH_SOURCE" ]; then
-        print_status "Fetch Source" "FAIL"
-        echo -e "${RED}fetch.c not found at $FETCH_SOURCE${NC}"
-        echo -e "${YELLOW}Please ensure the source file exists in the correct location.${NC}"
+        print_status "Source File" "FAIL"
+        echo -e "${BRIGHT_RED}❌ fetch.c not found at $FETCH_SOURCE${NC}"
+        echo -e "${BRIGHT_CYAN}💡 Please ensure the source file exists${NC}"
         exit 1
     fi
     
-    print_status "Fetch Source" "OK"
+    print_status "Source File" "OK"
+    echo -e "${DIM}   Location: ${BRIGHT_CYAN}$FETCH_SOURCE${NC}"
     
     # Compile fetch.c
-    echo -e "${DIM}Compiling fetch.c...${NC}"
+    echo -e "${BRIGHT_BLUE}🔧 Compiling fetch.c...${NC}"
     (gcc -o fetch "$FETCH_SOURCE" >/dev/null 2>&1) &
     show_spinner $! "Compiling fetch binary"
     
     if [ $? -ne 0 ]; then
         print_status "Compilation" "FAIL"
-        echo -e "${RED}Failed to compile fetch.c${NC}"
-        echo -e "${YELLOW}Please check the source code for errors.${NC}"
+        echo -e "${BRIGHT_RED}❌ Failed to compile fetch.c${NC}"
+        echo -e "${BRIGHT_CYAN}💡 Check if gcc and build tools are installed${NC}"
         exit 1
     fi
     
     print_status "Compilation" "OK"
     
     # Install fetch binary
-    echo -e "${DIM}Installing fetch binary...${NC}"
+    echo -e "${BRIGHT_BLUE}📥 Installing fetch binary...${NC}"
     (install -m 755 fetch "$INSTALL_DIR/fetch" >/dev/null 2>&1) &
     show_spinner $! "Installing fetch binary"
     
     if [ $? -ne 0 ]; then
         print_status "Installation" "FAIL"
-        echo -e "${RED}Failed to install fetch binary${NC}"
+        echo -e "${BRIGHT_RED}❌ Failed to install fetch binary${NC}"
+        echo -e "${BRIGHT_CYAN}💡 Check write permissions to $INSTALL_DIR${NC}"
         exit 1
     fi
     
     print_status "Installation" "OK"
+    echo -e "${DIM}   Installed to: ${BRIGHT_GREEN}$INSTALL_DIR/fetch${NC}"
     
     # Cleanup compiled binary
     rm -f fetch
@@ -349,16 +322,19 @@ compile_and_install_fetch() {
 
 # Install Oh My Zsh framework
 install_oh_my_zsh() {
-    print_section "🎨 Installing Oh My Zsh"
+    print_section "🐚 Installing Oh My Zsh"
     
     if [ -d "$USER_HOME/.oh-my-zsh" ]; then
         print_status "Oh My Zsh" "SKIP"
+        echo -e "${DIM}   Already installed${NC}"
         return 0
     fi
 
-    (sudo -u $SUDO_USER sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended >/dev/null 2>&1) &
+    echo -e "${BRIGHT_BLUE}📥 Downloading Oh My Zsh...${NC}"
+    (sudo -u $CURRENT_USER sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended >/dev/null 2>&1) &
     show_spinner $! "Installing Oh My Zsh"
     print_status "Oh My Zsh Setup" "OK"
+    echo -e "${DIM}   Location: ${BRIGHT_GREEN}$USER_HOME/.oh-my-zsh${NC}"
 }
 
 # Install Zsh plugins
@@ -377,7 +353,8 @@ install_zsh_plugins() {
         if [ -d "$plugin_dir" ]; then
             print_status "$name" "SKIP"
         else
-            (sudo -u $SUDO_USER git clone --depth=1 "$url" "$plugin_dir" >/dev/null 2>&1) &
+            echo -e "${BRIGHT_BLUE}📥 Installing $name...${NC}"
+            (sudo -u $CURRENT_USER git clone --depth=1 "$url" "$plugin_dir" >/dev/null 2>&1) &
             show_spinner $! "Installing $name"
         fi
     done
@@ -385,26 +362,29 @@ install_zsh_plugins() {
 
 # Install ble.sh for Bash using the quick install method
 install_blesh() {
-    print_section "🚀 Installing ble.sh for Bash"
+    print_section "🐚 Installing ble.sh for Bash"
     
     local blesh_dir="$USER_HOME/.local/share/blesh"
     
     if [ -d "$blesh_dir" ]; then
         print_status "ble.sh" "SKIP"
+        echo -e "${DIM}   Already installed${NC}"
         return 0
     fi
     
+    echo -e "${BRIGHT_BLUE}📥 Downloading ble.sh...${NC}"
     (
         cd "$USER_HOME"
-        sudo -u $SUDO_USER git clone --recursive --depth 1 --shallow-submodules https://github.com/akinomyoga/ble.sh.git >/dev/null 2>&1
+        sudo -u $CURRENT_USER git clone --recursive --depth 1 --shallow-submodules https://github.com/akinomyoga/ble.sh.git >/dev/null 2>&1
         cd ble.sh
-        sudo -u $SUDO_USER make install PREFIX="$USER_HOME/.local" >/dev/null 2>&1
+        sudo -u $CURRENT_USER make install PREFIX="$USER_HOME/.local" >/dev/null 2>&1
         rm -rf "$USER_HOME/ble.sh"
     ) &
     show_spinner $! "Installing ble.sh"
     
     if [ -d "$blesh_dir" ]; then
         print_status "ble.sh Setup" "OK"
+        echo -e "${DIM}   Location: ${BRIGHT_GREEN}$blesh_dir${NC}"
     else
         print_status "ble.sh Setup" "FAIL"
     fi
@@ -417,8 +397,10 @@ configure_zsh() {
     local zshrc="$USER_HOME/.zshrc"
     
     if [ -f "$zshrc" ]; then
-        cp "$zshrc" "$zshrc.backup.$(date +%Y%m%d_%H%M%S)"
+        local backup_file="$zshrc.backup.$(date +%Y%m%d_%H%M%S)"
+        cp "$zshrc" "$backup_file"
         print_status "Backup Created" "OK"
+        echo -e "${DIM}   Backup: ${BRIGHT_YELLOW}$backup_file${NC}"
     fi
     
     cat .templates/zshrc.template > "$zshrc"
@@ -427,10 +409,11 @@ configure_zsh() {
     echo -e "\n# Fetch tool display" >> "$zshrc"
     echo "command -v fetch >/dev/null && fetch" >> "$zshrc"
     
-    chown $SUDO_USER:$SUDO_USER "$zshrc"
+    chown $CURRENT_USER:$CURRENT_USER "$zshrc"
     chmod 644 "$zshrc"
     
     print_status "ZSH Configuration" "OK"
+    echo -e "${DIM}   Config: ${BRIGHT_GREEN}$zshrc${NC}"
 }
 
 # Configure Bash settings
@@ -440,8 +423,10 @@ configure_bash() {
     local bashrc="$USER_HOME/.bashrc"
     
     if [ -f "$bashrc" ]; then
-        cp "$bashrc" "$bashrc.backup.$(date +%Y%m%d_%H%M%S)"
+        local backup_file="$bashrc.backup.$(date +%Y%m%d_%H%M%S)"
+        cp "$bashrc" "$backup_file"
         print_status "Backup Created" "OK"
+        echo -e "${DIM}   Backup: ${BRIGHT_YELLOW}$backup_file${NC}"
     fi
     
     cat .templates/bashrc.template > "$bashrc"
@@ -456,10 +441,11 @@ configure_bash() {
     echo -e "\n# Fetch tool display" >> "$bashrc"
     echo "command -v fetch >/dev/null && fetch" >> "$bashrc"
     
-    chown $SUDO_USER:$SUDO_USER "$bashrc"
+    chown $CURRENT_USER:$CURRENT_USER "$bashrc"
     chmod 644 "$bashrc"
     
     print_status "BASH Configuration" "OK"
+    echo -e "${DIM}   Config: ${BRIGHT_GREEN}$bashrc${NC}"
 }
 
 # Enhanced shell changing functionality
@@ -468,11 +454,11 @@ change_shell() {
     
     if [ "$SHELL_CHOICE" != "zsh" ]; then
         print_status "Shell Change" "SKIP"
-        echo -e "${DIM}   Configuring for Bash, no shell change needed.${NC}"
+        echo -e "${DIM}   Configuring for Bash, no shell change needed${NC}"
         return 0
     fi
     
-    local current_shell=$(getent passwd $SUDO_USER | cut -d: -f7)
+    local current_shell=$(getent passwd $CURRENT_USER | cut -d: -f7)
     local zsh_path=$(which zsh)
     
     if [ "$current_shell" = "$zsh_path" ]; then
@@ -481,34 +467,36 @@ change_shell() {
         return 0
     fi
     
-    echo -e "${CYAN}   Current shell: ${GRAY}$current_shell${NC}"
-    echo -e "${CYAN}   Available shell: ${GRAY}$zsh_path${NC}\n"
+    print_status "Current Shell" "DETECT"
+    echo -e "${DIM}   Current: ${BRIGHT_YELLOW}$current_shell${NC}"
+    echo -e "${DIM}   Available: ${BRIGHT_CYAN}$zsh_path${NC}"
     
     if [ ! -f "$zsh_path" ]; then
         print_status "Zsh Installation" "FAIL"
-        echo -e "${RED}   Zsh not found. Please install Zsh first.${NC}"
+        echo -e "${BRIGHT_RED}❌ Zsh not found${NC}"
         return 1
     fi
     
     if ! grep -q "^$zsh_path\$" /etc/shells; then
-        echo -e "${DIM}   Adding Zsh to /etc/shells...${NC}"
+        echo -e "${BRIGHT_BLUE}📝 Adding Zsh to /etc/shells...${NC}"
         echo "$zsh_path" >> /etc/shells
     fi
     
-    echo -e "${CYAN}   Would you like to change your default shell to Zsh? [y/N]${NC}"
+    echo -e "\n${BRIGHT_CYAN}🤔 Would you like to change your default shell to Zsh? ${BOLD}[y/N]${NC}"
     read -r -n 1 change_shell_choice
     echo
     
     if [[ "$change_shell_choice" =~ ^[Yy]$ ]]; then
-        (chsh -s "$zsh_path" $SUDO_USER >/dev/null 2>&1) &
+        echo -e "${BRIGHT_BLUE}🔄 Changing default shell...${NC}"
+        (chsh -s "$zsh_path" $CURRENT_USER >/dev/null 2>&1) &
         show_spinner $! "Changing default shell"
         
         if [ $? -eq 0 ]; then
             print_status "Shell Change" "OK"
-            echo -e "${GREEN}   ✅ Shell successfully changed to Zsh${NC}"
+            echo -e "${BRIGHT_GREEN}✅ Shell successfully changed to Zsh${NC}"
         else
             print_status "Shell Change" "FAIL"
-            echo -e "${RED}   ❌ Failed to change shell${NC}"
+            echo -e "${BRIGHT_RED}❌ Failed to change shell${NC}"
         fi
     else
         print_status "Shell Change" "SKIP"
@@ -525,58 +513,60 @@ cleanup() {
 
 # Enhanced completion message
 print_completion() {
-    echo
-    printf "${GRADIENT_1}%${TERM_WIDTH}s${NC}\n" | tr ' ' '═'
-    echo -e "${BOLD}${GREEN}    🎉 Installation Complete! 🎉${NC}"
-    printf "${GRADIENT_1}%${TERM_WIDTH}s${NC}\n" | tr ' ' '═'
+    echo -e "\n${BOLD}${BRIGHT_GREEN}╔══════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${BOLD}${BRIGHT_GREEN}║                                                          ║${NC}"
+    echo -e "${BOLD}${BRIGHT_GREEN}║           🎉 INSTALLATION COMPLETE! 🎉                  ║${NC}"
+    echo -e "${BOLD}${BRIGHT_GREEN}║                                                          ║${NC}"
+    echo -e "${BOLD}${BRIGHT_GREEN}╚══════════════════════════════════════════════════════════╝${NC}"
     
-    echo -e "\n${BOLD}${WHITE}📋 Available Commands:${NC}"
-    echo -e "  ${CYAN}fetch${NC}         - 🚀 Modern system info display"
+    echo -e "\n${BOLD}${BRIGHT_WHITE}📋 Available Commands:${NC}"
+    echo -e "  ${BRIGHT_CYAN}fetch${NC}         - Modern system info display"
     echo
-    echo -e "${BOLD}${WHITE}📁 Installation Locations:${NC}"
-    echo -e "  ${DIM}Installation:${NC} ${WHITE}$INSTALL_DIR${NC}"
+    echo -e "${BOLD}${BRIGHT_WHITE}📍 Installation Locations:${NC}"
+    echo -e "  ${DIM}Binary:${NC} ${BRIGHT_GREEN}$INSTALL_DIR/fetch${NC}"
     if [ "$SHELL_CHOICE" = "zsh" ]; then
-        echo -e "  ${DIM}ZSH Configuration:${NC} ${WHITE}$USER_HOME/.zshrc${NC}"
+        echo -e "  ${DIM}ZSH Config:${NC} ${BRIGHT_GREEN}$USER_HOME/.zshrc${NC}"
     else
-        echo -e "  ${DIM}BASH Configuration:${NC} ${WHITE}$USER_HOME/.bashrc${NC}"
+        echo -e "  ${DIM}BASH Config:${NC} ${BRIGHT_GREEN}$USER_HOME/.bashrc${NC}"
     fi
     if [ -d "$USER_HOME/.local/share/blesh" ]; then
-        echo -e "  ${DIM}ble.sh:${NC} ${WHITE}$USER_HOME/.local/share/blesh${NC}"
+        echo -e "  ${DIM}ble.sh:${NC} ${BRIGHT_GREEN}$USER_HOME/.local/share/blesh${NC}"
     fi
-    echo -e "  ${DIM}Log file:${NC} ${WHITE}$LOG_FILE${NC}"
-    
-    echo -e "\n${BOLD}${YELLOW}⚠️  Important:${NC}"
-    echo -e "${YELLOW}Please log out and log back in to apply all changes${NC}"
-    
-    printf "${GRADIENT_1}%${TERM_WIDTH}s${NC}\n" | tr ' ' '═'
+    echo -e "  ${DIM}Log file:${NC} ${BRIGHT_YELLOW}$LOG_FILE${NC}"
+    echo
+    echo -e "${BOLD}${BRIGHT_YELLOW}🔄 Please log out and log back in to apply all changes${NC}"
+    echo -e "${BOLD}${BRIGHT_CYAN}💡 Or run: ${BRIGHT_WHITE}source ~/.$(basename $SHELL)rc${NC}"
     echo
 }
 
 # Main execution flow
 main() {
     print_banner
-    check_root
+    check_and_elevate_sudo
     detect_os
     
     # Enhanced shell selection
-    echo -e "${BOLD}${CYAN}🐚 Select the shell to configure:${NC}"
-    echo -e "1) ${BOLD}${LIGHT_BLUE}Bash${NC} ${DIM}(with ble.sh enhancement)${NC}"
-    echo -e "2) ${BOLD}${LIGHT_GREEN}Zsh${NC} ${DIM}(with Oh My Zsh framework)${NC}\n"
-    echo -e "${CYAN}Enter choice [1-2]: ${NC}"
+    echo -e "${BRIGHT_CYAN}🐚 Select the shell to configure:${NC}"
+    echo -e "  ${BOLD}1)${NC} ${BRIGHT_GREEN}Bash${NC} ${DIM}(with ble.sh enhancement)${NC}"
+    echo -e "  ${BOLD}2)${NC} ${BRIGHT_BLUE}Zsh${NC} ${DIM}(with Oh My Zsh framework)${NC}"
+    echo
+    echo -ne "${BRIGHT_CYAN}Enter your choice ${BOLD}[1-2]${NC}: "
     read -r shell_choice
     
     case $shell_choice in
         1)
             SHELL_CHOICE="bash"
-            print_status "Shell Choice" "Bash 🐚"
+            print_status "Shell Selection" "OK"
+            echo -e "${DIM}   Selected: ${BRIGHT_GREEN}Bash with ble.sh${NC}"
             ;;
         2)
             SHELL_CHOICE="zsh"
-            print_status "Shell Choice" "Zsh 🎨"
+            print_status "Shell Selection" "OK"
+            echo -e "${DIM}   Selected: ${BRIGHT_BLUE}Zsh with Oh My Zsh${NC}"
             ;;
         *)
-            print_status "Shell Choice" "FAIL"
-            echo -e "${RED}❌ Invalid choice. Please select 1 or 2.${NC}"
+            print_status "Shell Selection" "FAIL"
+            echo -e "${BRIGHT_RED}❌ Invalid choice. Please run the installer again.${NC}"
             exit 1
             ;;
     esac
@@ -598,20 +588,17 @@ main() {
     print_completion
 }
 
-# Enhanced error handling and logging
+# Enhanced script execution with better error handling
 {
     main "$@"
 } 2>&1 | tee -a "$LOG_FILE"
 
-# Final status check with enhanced feedback
 if [ $? -eq 0 ]; then
     clear
-    echo -e "${BOLD}${GREEN}🎉 Installation completed successfully! 🎉${NC}"
-    echo -e "${YELLOW}📋 Please log out and log back in to see the changes.${NC}"
-    echo -e "${DIM}💾 Installation log saved to: $LOG_FILE${NC}"
+    echo -e "${BRIGHT_GREEN}🎉 Installation completed successfully!${NC}"
+    echo -e "${BRIGHT_YELLOW}🔄 Please log out and log back in to see the changes.${NC}"
     sleep 3
 else
-    echo -e "${BOLD}${RED}❌ Installation encountered issues.${NC}"
-    echo -e "${YELLOW}📋 Check the log file for details: ${WHITE}$LOG_FILE${NC}"
-    echo -e "${CYAN}💡 Try running the script again or check the error messages above.${NC}"
+    echo -e "${BRIGHT_RED}❌ Installation encountered issues. Check log: $LOG_FILE${NC}"
+    exit 1
 fi
