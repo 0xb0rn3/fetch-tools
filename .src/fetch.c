@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
+#include <sys/statvfs.h>
 #include <pwd.h>
 #include <time.h>
 
@@ -17,50 +18,6 @@
 #define MAGENTA "\033[35m"
 #define CYAN    "\033[36m"
 #define WHITE   "\033[37m"
-
-// ASCII art lines
-const char* ascii_lines[] = {
-    "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣠⣴⣶⣶⣶⣶⣦⣤⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀",
-    "⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣶⣾⣿⣿⣿⣿⣟⠁⠀⢹⣿⣿⣿⣿⣿⣶⣤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀",
-    "⠀⠀⠀⠀⠀⠀⢠⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⡄⠀⣸⣿⣿⣿⣿⣿⣿⣿⣿⣷⣄⠀⠀⠀⠀⠀⠀⠀",
-    "⠀⠀⠀⠀⠀⢀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⢀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⠀",
-    "⠀⠀⠀⠀⠀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡄⠀⠀⠀⠀⠀",
-    "⠀⠀⠀⠀⣸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⢫⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡀⠀⠀⠀⠀",
-    "⠀⠀⠀⢠⣿⣿⣿⣿⣿⣏⠹⣿⣿⣿⣿⣿⣿⡃⠀⢩⣿⣿⣶⣬⣿⠟⠙⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀",
-    "⠀⠀⠀⣾⣿⣿⣿⣿⣿⣿⠀⠻⠛⠛⠿⠛⠛⠁⠀⠘⠛⠿⠛⠛⠿⠇⢰⣿⣿⣿⣿⣿⣿⡄⠀⠀⠀",
-    "⠀⠀⢰⣿⣿⣿⣿⣿⣿⣿⣶⣶⡄⠀⠀⠀⣠⣤⣦⣄⡀⠀⠀⠀⣤⣶⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀",
-    "⠀⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⢠⣿⣿⣿⣿⣿⠀⠀⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⠀⠀",
-    "⠀⣸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠘⠿⣿⣿⣿⠟⠀⣠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀",
-    "⢀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣄⠀⠀⠀⠀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀",
-    "⠘⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠉⠻⣿⣿⣿⣿⡿⠋⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠛⠁",
-    "⠀⠀⠀⠙⠻⢿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⣿⣿⣿⣿⡗⠂⢸⣿⣿⣿⣿⣿⣿⣿⣿⡿⠋⠁⠀⠀⠀",
-    "⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⢸⣿⣿⣿⠁⡁⢸⣿⣿⣿⣿⣿⣿⣿⡟⠀⠀⠀⠀⠀⠀",
-    "⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⢸⣿⣿⣿⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀",
-    "⠀⠀⠀⠀⠀⠀⢹⣿⣿⣿⣿⣿⣿⣿⠀⠀⢸⣿⣿⣿⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⠃⠀⠀⠀⠀⠀⠀",
-    "⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⠀⠀⢸⣿⣿⡏⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀",
-    "⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⠀⠀⠸⣿⣿⡇⠀⠀⢸⣿⣿⣿⣿⣿⣿⡟⠀⠀⠀⠀⠀⠀⠀",
-    "⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠈⠉⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀",
-    "⠀⠀⠀⠀⠀⠀⠀⠸⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⡿⠀⠀⠀⠀⠀⠀⠀⠀",
-    "⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⢿⣿⣿⡿⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⠿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-};
-
-#define ASCII_LINES_COUNT 22
-
-// Function to read a line from a file
-char* read_file_line(const char* filename) {
-    FILE* file = fopen(filename, "r");
-    if (!file) return NULL;
-    
-    static char buffer[256];
-    if (fgets(buffer, sizeof(buffer), file)) {
-        // Remove newline
-        buffer[strcspn(buffer, "\n")] = 0;
-        fclose(file);
-        return buffer;
-    }
-    fclose(file);
-    return NULL;
-}
 
 // Function to get OS info
 void get_os_info(char* os_name, char* kernel) {
@@ -96,7 +53,25 @@ void get_memory_info(char* memory) {
     long free_ram = sys_info.freeram / 1024 / 1024;
     long used_ram = total_ram - free_ram;
     
-    sprintf(memory, "%ld MB / %ld MB", used_ram, total_ram);
+    sprintf(memory, "%ld MB / %ld MB (%.1f%%)", used_ram, total_ram, 
+            (float)used_ram / total_ram * 100);
+}
+
+// Function to get storage info
+void get_storage_info(char* storage) {
+    struct statvfs stat;
+    
+    if (statvfs("/", &stat) != 0) {
+        strcpy(storage, "Unknown");
+        return;
+    }
+    
+    unsigned long total = (stat.f_blocks * stat.f_frsize) / (1024 * 1024 * 1024); // GB
+    unsigned long available = (stat.f_bavail * stat.f_frsize) / (1024 * 1024 * 1024); // GB
+    unsigned long used = total - available;
+    
+    sprintf(storage, "%lu GB / %lu GB (%.1f%%)", used, total, 
+            (float)used / total * 100);
 }
 
 // Function to get uptime
@@ -133,6 +108,10 @@ void get_cpu_info(char* cpu) {
             if (colon) {
                 strcpy(cpu, colon + 2);
                 cpu[strcspn(cpu, "\n")] = 0;
+                // Trim leading/trailing whitespace
+                char* start = cpu;
+                while (*start == ' ') start++;
+                memmove(cpu, start, strlen(start) + 1);
                 break;
             }
         }
@@ -155,54 +134,24 @@ void get_shell_info(char* shell) {
     }
 }
 
-// Function to print info line with ASCII art
-void print_info_with_ascii(const char* color, const char* label, const char* value, int line_num) {
-    const int target_col = 40;
-    const int min_padding = 2;
-    // Calculate the maximum allowed length for the value string to keep alignment
-    int max_value_len = target_col - strlen(label) - 2 /* for ": " */ - min_padding;
-
-    char truncated_value[256];
-    strncpy(truncated_value, value, sizeof(truncated_value) - 1);
-    truncated_value[sizeof(truncated_value) - 1] = '\0'; // Ensure null termination
-
-    // If the value is too long, truncate it and add "..."
-    if (strlen(truncated_value) > max_value_len) {
-        truncated_value[max_value_len - 3] = '\0'; // Make space for "..."
-        strcat(truncated_value, "...");
+// Function to get desktop environment
+void get_desktop_info(char* desktop) {
+    char* de = getenv("XDG_CURRENT_DESKTOP");
+    if (de) {
+        strcpy(desktop, de);
+    } else {
+        de = getenv("DESKTOP_SESSION");
+        if (de) {
+            strcpy(desktop, de);
+        } else {
+            strcpy(desktop, "Unknown");
+        }
     }
-
-    // Calculate visible length with the (possibly) truncated value
-    int visible_len = strlen(label) + strlen(truncated_value) + 2; // +2 for ": "
-
-    // Print the info line
-    printf("%s%s%s%s: %s", color, BOLD, label, RESET, truncated_value);
-
-    // Add padding to reach the target column
-    int padding = target_col - visible_len;
-    if (padding < min_padding) padding = min_padding;
-
-    for (int i = 0; i < padding; i++) {
-        printf(" ");
-    }
-
-    if (line_num < ASCII_LINES_COUNT) {
-        printf("%s%s%s", CYAN, ascii_lines[line_num], RESET);
-    }
-    printf("\n");
 }
 
-// Function to print just ASCII art line
-void print_ascii_line(int line_num) {
-    // Pad to column 40
-    for (int i = 0; i < 40; i++) {
-        printf(" ");
-    }
-    
-    if (line_num < ASCII_LINES_COUNT) {
-        printf("%s%s%s", CYAN, ascii_lines[line_num], RESET);
-    }
-    printf("\n");
+// Function to print info line
+void print_info(const char* color, const char* label, const char* value) {
+    printf("%s%s%-12s%s %s\n", color, BOLD, label, RESET, value);
 }
 
 int main() {
@@ -215,83 +164,52 @@ int main() {
     char os_name[256] = {0};
     char kernel[256] = {0};
     char memory[256] = {0};
+    char storage[256] = {0};
     char uptime[256] = {0};
     char cpu[256] = {0};
     char shell[256] = {0};
+    char desktop[256] = {0};
     
     get_os_info(os_name, kernel);
     get_memory_info(memory);
+    get_storage_info(storage);
     get_uptime(uptime);
     get_cpu_info(cpu);
     get_shell_info(shell);
+    get_desktop_info(desktop);
     
     printf("\n");
     
-    // Print header with ASCII art
-    printf("%s%s%s@%s%s", CYAN, BOLD, pw->pw_name, hostname, RESET);
+    // Print header
+    printf("%s%s%s@%s%s\n", CYAN, BOLD, pw->pw_name, hostname, RESET);
     
-    // Calculate visible length and pad to column 40
-    int header_visible_len = strlen(pw->pw_name) + strlen(hostname) + 1;
-    int header_padding = 40 - header_visible_len;
-    if (header_padding < 2) header_padding = 2;
-    
-    for (int i = 0; i < header_padding; i++) {
-        printf(" ");
-    }
-    
-    printf("%s%s%s", CYAN, ascii_lines[0], RESET);
-    printf("\n");
-    
-    // Print separator with ASCII art
+    // Print separator
     int header_len = strlen(pw->pw_name) + strlen(hostname) + 1;
     for (int i = 0; i < header_len; i++) {
         printf("%s-%s", CYAN, RESET);
     }
-    
-    for (int i = 0; i < header_padding; i++) {
-        printf(" ");
-    }
-    
-    printf("%s%s%s", CYAN, ascii_lines[1], RESET);
     printf("\n");
     
-    // Print system info with ASCII art
-    print_info_with_ascii(RED, "OS", os_name, 2);
-    print_info_with_ascii(GREEN, "Kernel", kernel, 3);
-    print_info_with_ascii(YELLOW, "Uptime", uptime, 4);
-    print_info_with_ascii(BLUE, "Shell", shell, 5);
-    print_info_with_ascii(MAGENTA, "CPU", cpu, 6);
-    print_info_with_ascii(CYAN, "Memory", memory, 7);
+    // Print system info
+    print_info(RED, "OS:", os_name);
+    print_info(GREEN, "Kernel:", kernel);
+    print_info(YELLOW, "Uptime:", uptime);
+    print_info(BLUE, "Shell:", shell);
+    print_info(MAGENTA, "Desktop:", desktop);
+    print_info(CYAN, "CPU:", cpu);
+    print_info(WHITE, "Memory:", memory);
+    print_info(GREEN, "Storage:", storage);
     
-    // Print color palette with ASCII art
-    printf("%sColors%s: ", WHITE, RESET);
+    // Print color palette
+    printf("%sColors:%s      ", WHITE, RESET);
     printf("%s●%s ", RED, RESET);
     printf("%s●%s ", GREEN, RESET);
     printf("%s●%s ", YELLOW, RESET);
     printf("%s●%s ", BLUE, RESET);
     printf("%s●%s ", MAGENTA, RESET);
     printf("%s●%s ", CYAN, RESET);
-    printf("%s●%s ", WHITE, RESET);
-    
-    // Correctly calculate color line visible length and pad to column 40
-    // "Colors: " is 8 chars. Each colored "● " is 2 chars. 7 sets of them. Total = 8 + (7*2) = 22.
-    int color_visible_len = 22;
-    int color_padding = 40 - color_visible_len;
-    if (color_padding < 2) color_padding = 2;
-    
-    for (int i = 0; i < color_padding; i++) {
-        printf(" ");
-    }
-    
-    printf("%s%s%s", CYAN, ascii_lines[8], RESET);
-    printf("\n");
-    
-    // Print remaining ASCII art lines
-    for (int i = 9; i < ASCII_LINES_COUNT; i++) {
-        print_ascii_line(i);
-    }
-    
-    printf("\n");
+    printf("%s●%s", WHITE, RESET);
+    printf("\n\n");
     
     return 0;
 }
