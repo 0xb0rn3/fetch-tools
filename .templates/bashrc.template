@@ -86,7 +86,12 @@ alias df='df -h'
 alias free='free -m'
 alias myip='curl ifconfig.me'
 alias ports='netstat -tulanp'
-
+alias diskinfo='
+echo "=== Storage Overview ===" && 
+df -h / | tail -n 1 | awk '\''{printf "Total: %s | Used: %s (%s) | Free: %s\n", $2, $3, $5, $4}'\'' && 
+echo && echo "=== Top Directories by Size ===" && 
+sudo du -hx / --max-depth=1 2>/dev/null | sort -rh | head -n 20
+'
 # Add color to man pages
 export LESS_TERMCAP_mb=$'\E[1;31m'
 export LESS_TERMCAP_md=$'\E[1;36m'
