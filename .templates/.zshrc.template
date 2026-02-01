@@ -67,7 +67,7 @@ zstyle ':completion:*' use-cache yes
 zstyle ':completion:*' cache-path ~/.cache/zsh-completions
 configure_prompt() {
     autoload -U colors && colors
-    PROMPT="%{$fg[white]%}[%{$fg[blue]%}🐧シェルショック💀${USER}%{$fg[white]%}]-[%{$fg[green]%}%~%{$fg[white]%}]λ %{$reset_color%}"
+    PROMPT="%{$fg[white]%}[%{$fg[blue]%}🐧マシン💀${USER}%{$fg[white]%}]-[%{$fg[green]%}%~%{$fg[white]%}]λ %{$reset_color%}"
 }
 
 # Apply prompt configuration
@@ -92,6 +92,15 @@ alias cls='clear'
 alias term='clear'
 alias grep='grep --color=auto'
 alias itunes='wine .wine/drive_c/Program\ Files/iTunes/iTunes.exe'
+alias arxos-update='sudo pacman -Syy && sudo pacman -Syu'
+alias arxos-install='sudo pacman -Syu'
+alias arxos-refresh-keys='sudo pacman-key --init && sudo pacman-key --populate archlinux'
+alias arxos-clean='sudo pacman -Scc'
+alias arxos-remove='sudo pacman -Rns'
+alias arxos-force-remove='sudo pacman -Rdd'
+alias arxos-boostmode='sudo cpu-governor performance'
+alias arxos-powersave='sudo cpu-governor powersave'
+alias arxos-cpu-status='sudo cpu-governor status'
 
 # Directory navigation
 alias ..='cd ..'
@@ -132,3 +141,184 @@ function term() {
 
 # Created by `pipx` on 2025-03-26 20:42:53
 export PATH="$PATH:/home/0xb3/.local/bin"
+
+# Fetch tool display
+command -v fetch >/dev/null && fetch
+
+# ============================================================================
+# ARXOS ENHANCED ALIASES
+# ============================================================================
+
+# Package management extras
+alias arxos-orphans='sudo pacman -Rns $(pacman -Qtdq) 2>/dev/null || echo "No orphans"'
+alias arxos-mirrors='sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist'
+alias pkglist='pacman -Qe'
+alias pkgcount='pacman -Q | wc -l'
+alias pkgown='pacman -Qo'
+alias pkgsize='expac -H M "%011m\t%-20n\t%10d" | sort -n -r | head -20'
+
+# System monitoring
+alias sysinfo='inxi -Fxz'
+alias temps='sensors'
+alias procs='ps aux --sort=-%cpu | head -20'
+alias meminfo='free -h && echo && ps aux --sort=-%mem | head -10'
+
+# Service management
+alias service-list='systemctl list-units --type=service'
+alias service-failed='systemctl --failed'
+alias service-start='sudo systemctl start'
+alias service-stop='sudo systemctl stop'
+alias service-restart='sudo systemctl restart'
+alias service-enable='sudo systemctl enable'
+alias service-disable='sudo systemctl disable'
+
+# Logs
+alias logs='sudo journalctl -xe'
+alias logs-boot='sudo journalctl -b'
+alias logs-follow='sudo journalctl -f'
+alias logs-service='sudo journalctl -u'
+
+# Network
+alias portsopen='sudo netstat -tulpn | grep LISTEN'
+alias connections='sudo ss -tunap'
+alias localip='ip -4 addr show | grep inet | grep -v 127.0.0.1'
+alias gateway='ip route | grep default'
+alias wifi='nmcli device wifi list'
+alias wifi-connect='nmcli device wifi connect'
+
+# Git shortcuts
+alias gs='git status'
+alias ga='git add'
+alias gc='git commit -m'
+alias gp='git push'
+alias gl='git log --oneline --graph --decorate'
+alias gd='git diff'
+alias gpl='git pull'
+
+# Better file operations
+alias mkdir='mkdir -pv'
+alias cp='cp -iv'
+alias mv='mv -iv'
+alias lt='ls -lht'
+alias lz='ls -lhS'
+alias tree='tree -C'
+
+# Quick navigation
+alias .....='cd ../../../..'
+alias dl='cd ~/Downloads'
+alias docs='cd ~/Documents'
+
+# Python
+alias py='python3'
+alias serve='python3 -m http.server 8000'
+
+# Custom functions
+mkcd() { mkdir -p "$1" && cd "$1"; }
+backup() { cp "$1" "$1.backup-$(date +%Y%m%d-%H%M%S)"; }
+killp() { ps aux | grep "$1" | grep -v grep | awk '{print $2}' | xargs sudo kill -9; }
+
+whatsmyip() {
+    echo "Local IP:    $(hostname -I | awk '{print $1}')"
+    echo "External IP: $(curl -s ifconfig.me)"
+}
+
+path() { echo $PATH | tr ':' '\n'; }
+duh() { du -h --max-depth=1 | sort -rh; }
+countfiles() { find "${1:-.}" -type f | wc -l; }
+bigfiles() { find . -type f -exec du -h {} + | sort -rh | head -${1:-20}; }
+
+isup() {
+    curl -s --head --request GET "$1" | grep "200 OK" > /dev/null && echo "✓ UP" || echo "✗ DOWN"
+}
+
+# ArxOS health check
+arxos-health() {
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "    ArxOS System Health"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "=== Failed Services ==="
+    systemctl --failed 2>/dev/null || echo "✓ No failed services"
+    echo ""
+    echo "=== Disk Usage ==="
+    df -h / | tail -n 1
+    echo ""
+    echo "=== Memory ==="
+    free -h | grep Mem
+    echo ""
+    echo "=== Load ==="
+    uptime
+    echo ""
+    echo "=== Updates ==="
+    checkupdates 2>/dev/null | wc -l | xargs echo "Updates available:"
+}
+
+# ArxOS selfscan
+arxos-selfscan() {
+    echo "Scanning localhost for open ports..."
+    sudo nmap -sS -sV localhost
+}
+
+# ============================================================================
+# NETWORK SPEED TEST ALIASES
+# ============================================================================
+
+alias speedtest='netspeed -q'
+alias st='netspeed -q'
+alias speedtest-full='netspeed -f'
+alias pingtest='netspeed -p'
+alias myip='curl -s ifconfig.me && echo'
+alias netinfo='netspeed -i'
+
+# Quick network tests
+alias ping1='ping -c 5 1.1.1.1'
+alias ping8='ping -c 5 8.8.8.8'
+
+# Network info functions
+testhost() {
+    [ -z "$1" ] && echo "Usage: testhost <hostname>" && return 1
+    echo "Testing $1..."
+    ping -c 5 "$1"
+    echo
+    dig +short "$1"
+}
+
+portcheck() {
+    [ -z "$1" ] || [ -z "$2" ] && echo "Usage: portcheck <host> <port>" && return 1
+    timeout 3 bash -c "echo >/dev/tcp/$1/$2" 2>/dev/null && \
+        echo "Port $2 is OPEN on $1" || \
+        echo "Port $2 is CLOSED on $1"
+}
+
+export PATH="$HOME/bin:$PATH"
+
+# ============================================================================
+# NETWORK SPEED TEST ALIASES
+# ============================================================================
+
+alias speedtest='netspeed -q'
+alias st='netspeed -q'
+alias speedtest-full='netspeed -f'
+alias pingtest='netspeed -p'
+alias myip='curl -s ifconfig.me && echo'
+alias netinfo='netspeed -i'
+
+# Quick network tests
+alias ping1='ping -c 5 1.1.1.1'
+alias ping8='ping -c 5 8.8.8.8'
+
+# Network info functions
+testhost() {
+    [ -z "$1" ] && echo "Usage: testhost <hostname>" && return 1
+    echo "Testing $1..."
+    ping -c 5 "$1"
+    echo
+    dig +short "$1"
+}
+
+portcheck() {
+    [ -z "$1" ] || [ -z "$2" ] && echo "Usage: portcheck <host> <port>" && return 1
+    timeout 3 bash -c "echo >/dev/tcp/$1/$2" 2>/dev/null && \
+        echo "Port $2 is OPEN on $1" || \
+        echo "Port $2 is CLOSED on $1"
+}
