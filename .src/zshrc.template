@@ -1,0 +1,311 @@
+# ─── oh-my-zsh ───────────────────────────────────────────────────────────────
+export ZSH="$HOME/.oh-my-zsh"
+
+plugins=(
+  git
+  colored-man-pages
+  command-not-found
+  extract
+  sudo
+  history
+  dirhistory
+  copypath
+  copyfile
+  web-search
+  urltools
+  zsh-syntax-highlighting
+  zsh-autosuggestions
+)
+
+source $ZSH/oh-my-zsh.sh
+
+# ─── zsh options ─────────────────────────────────────────────────────────────
+setopt autocd
+setopt interactivecomments
+setopt magicequalsubst
+setopt nonomatch
+setopt notify
+setopt numericglobsort
+setopt promptsubst
+
+PROMPT_EOL_MARK=""
+
+# ─── key bindings ────────────────────────────────────────────────────────────
+bindkey -e
+bindkey ' ' magic-space
+bindkey '^U' backward-kill-line
+bindkey '^[[3;5~' kill-word
+bindkey '^[[3~' delete-char
+bindkey '^[[1;5C' forward-word
+bindkey '^[[1;5D' backward-word
+bindkey '^[[5~' beginning-of-buffer-or-history
+bindkey '^[[6~' end-of-buffer-or-history
+bindkey '^[[H' beginning-of-line
+bindkey '^[[F' end-of-line
+bindkey '^[[Z' undo
+
+# ─── completion ──────────────────────────────────────────────────────────────
+autoload -Uz compinit
+compinit -d ~/.cache/zcompdump
+
+zstyle ':completion:*' menu select
+zstyle ':completion:*' auto-description 'specify: %d'
+zstyle ':completion:*' completer _expand _complete
+zstyle ':completion:*' format 'Completing %d'
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*' list-colors ''
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+zstyle ':completion:*' rehash true
+zstyle ':completion:*' verbose true
+zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
+zstyle ':completion:*:*:*:*:*' menu select=2
+zstyle ':completion:*' use-cache yes
+zstyle ':completion:*' cache-path ~/.cache/zsh-completions
+
+# ─── prompt ──────────────────────────────────────────────────────────────────
+configure_prompt() {
+    autoload -U colors && colors
+    PROMPT="%{$fg[white]%}[%{$fg[blue]%}🐧マシン💀${USER}%{$fg[white]%}]-[%{$fg[green]%}%~%{$fg[white]%}]λ %{$reset_color%}"
+}
+configure_prompt
+
+# ─── history ─────────────────────────────────────────────────────────────────
+HISTFILE=~/.zsh_history
+HISTSIZE=1000
+SAVEHIST=2000
+setopt hist_expire_dups_first
+setopt hist_ignore_dups
+setopt hist_ignore_space
+setopt hist_verify
+setopt share_history
+
+# ─── core aliases ────────────────────────────────────────────────────────────
+alias ls='ls --color=auto'
+alias ll='ls -l'
+alias la='ls -A'
+alias l='ls -CF'
+alias lt='ls -lht'
+alias lz='ls -lhS'
+alias cls='clear'
+alias term='clear'
+alias grep='grep --color=auto'
+alias itunes='wine .wine/drive_c/Program\ Files/iTunes/iTunes.exe'
+
+# directory navigation
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias .....='cd ../../../..'
+alias dl='cd ~/Downloads'
+alias docs='cd ~/Documents'
+
+# safer file ops
+alias mkdir='mkdir -pv'
+alias cp='cp -iv'
+alias mv='mv -iv'
+alias tree='tree -C'
+
+# system info
+alias df='df -h'
+alias free='free -m'
+alias ports='netstat -tulanp'
+alias portsopen='sudo netstat -tulpn | grep LISTEN'
+alias connections='sudo ss -tunap'
+alias localip='ip -4 addr show | grep inet | grep -v 127.0.0.1'
+alias gateway='ip route | grep default'
+alias wifi='nmcli device wifi list'
+alias wifi-connect='nmcli device wifi connect'
+alias sysinfo='inxi -Fxz'
+alias temps='sensors'
+alias procs='ps aux --sort=-%cpu | head -20'
+alias meminfo='free -h && echo && ps aux --sort=-%mem | head -10'
+
+alias diskinfo='
+echo "=== Storage Overview ===" &&
+df -h / | tail -n 1 | awk '"'"'{printf "Total: %s | Used: %s (%s) | Free: %s\n", $2, $3, $5, $4}'"'"' &&
+echo && echo "=== Top Directories by Size ===" &&
+sudo du -hx / --max-depth=1 2>/dev/null | sort -rh | head -n 20
+'
+
+# service management
+alias service-list='systemctl list-units --type=service'
+alias service-failed='systemctl --failed'
+alias service-start='sudo systemctl start'
+alias service-stop='sudo systemctl stop'
+alias service-restart='sudo systemctl restart'
+alias service-enable='sudo systemctl enable'
+alias service-disable='sudo systemctl disable'
+
+# logs
+alias logs='sudo journalctl -xe'
+alias logs-boot='sudo journalctl -b'
+alias logs-follow='sudo journalctl -f'
+alias logs-service='sudo journalctl -u'
+
+# git
+alias gs='git status'
+alias ga='git add'
+alias gc='git commit -m'
+alias gp='git push'
+alias gl='git log --oneline --graph --decorate'
+alias gd='git diff'
+alias gpl='git pull'
+
+# python
+alias py='python3'
+alias serve='python3 -m http.server 8000'
+
+# network speed
+alias speedtest='netspeed -q'
+alias st='netspeed -q'
+alias speedtest-full='netspeed -f'
+alias pingtest='netspeed -p'
+alias myip='curl -s ifconfig.me && echo'
+alias netinfo='netspeed -i'
+alias ping1='ping -c 5 1.1.1.1'
+alias ping8='ping -c 5 8.8.8.8'
+
+# web search
+alias google='web_search google'
+alias bing='web_search bing'
+alias ddg='web_search duckduckgo'
+
+# ─── distro-aware package manager aliases ────────────────────────────────────
+if command -v pacman >/dev/null 2>&1; then
+    alias update='sudo pacman -Syy && sudo pacman -Syu'
+    alias install='sudo pacman -S'
+    alias remove='sudo pacman -Rns'
+    alias clean='sudo pacman -Scc'
+    alias search='pacman -Ss'
+    alias pkglist='pacman -Qe'
+    alias pkgcount='pacman -Q | wc -l'
+    alias pkgown='pacman -Qo'
+    alias pkgsize='expac -H M "%011m\t%-20n\t%10d" | sort -n -r | head -20'
+    alias orphans='sudo pacman -Rns $(pacman -Qtdq) 2>/dev/null || echo "No orphans"'
+    alias mirrors='sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist'
+    # arxos aliases
+    alias arxos-update='sudo pacman -Syy && sudo pacman -Syu'
+    alias arxos-install='sudo pacman -S'
+    alias arxos-refresh-keys='sudo pacman-key --init && sudo pacman-key --populate archlinux'
+    alias arxos-clean='sudo pacman -Scc'
+    alias arxos-remove='sudo pacman -Rns'
+    alias arxos-force-remove='sudo pacman -Rdd'
+    alias arxos-boostmode='sudo cpu-governor performance'
+    alias arxos-powersave='sudo cpu-governor powersave'
+    alias arxos-cpu-status='sudo cpu-governor status'
+    alias arxos-orphans='sudo pacman -Rns $(pacman -Qtdq) 2>/dev/null || echo "No orphans"'
+    alias arxos-mirrors='sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist'
+    arxos-health() {
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "    ArxOS System Health"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "" && echo "=== Failed Services ==="
+        systemctl --failed 2>/dev/null || echo "✓ No failed services"
+        echo "" && echo "=== Disk Usage ===" && df -h / | tail -n 1
+        echo "" && echo "=== Memory ===" && free -h | grep Mem
+        echo "" && echo "=== Load ===" && uptime
+        echo "" && echo "=== Updates ==="
+        checkupdates 2>/dev/null | wc -l | xargs echo "Updates available:"
+    }
+    arxos-selfscan() {
+        echo "Scanning localhost for open ports..."
+        sudo nmap -sS -sV localhost
+    }
+elif command -v apt-get >/dev/null 2>&1; then
+    alias update='sudo apt-get update && sudo apt-get upgrade -y'
+    alias install='sudo apt-get install -y'
+    alias remove='sudo apt-get remove'
+    alias purge='sudo apt-get purge'
+    alias clean='sudo apt-get autoremove -y && sudo apt-get clean'
+    alias search='apt-cache search'
+    alias pkglist='apt list --installed 2>/dev/null'
+    alias pkgcount='dpkg -l | wc -l'
+    alias pkgown='dpkg -S'
+    alias orphans='sudo apt-get autoremove'
+elif command -v dnf >/dev/null 2>&1; then
+    alias update='sudo dnf update -y'
+    alias install='sudo dnf install -y'
+    alias remove='sudo dnf remove -y'
+    alias clean='sudo dnf clean all && sudo dnf autoremove -y'
+    alias search='dnf search'
+    alias pkglist='dnf list installed'
+    alias pkgcount='rpm -qa | wc -l'
+    alias pkgown='rpm -qf'
+    alias orphans='sudo dnf autoremove -y'
+elif command -v zypper >/dev/null 2>&1; then
+    alias update='sudo zypper refresh && sudo zypper update -y'
+    alias install='sudo zypper install -y'
+    alias remove='sudo zypper remove -y'
+    alias clean='sudo zypper clean --all'
+    alias search='zypper search'
+    alias pkglist='zypper packages --installed-only'
+    alias pkgcount='rpm -qa | wc -l'
+    alias pkgown='rpm -qf'
+    alias orphans='sudo zypper packages --orphaned'
+elif command -v xbps-install >/dev/null 2>&1; then
+    alias update='sudo xbps-install -Su'
+    alias install='sudo xbps-install -S'
+    alias remove='sudo xbps-remove -R'
+    alias clean='sudo xbps-remove -Oo'
+    alias search='xbps-query -Rs'
+    alias pkglist='xbps-query -l'
+    alias pkgcount='xbps-query -l | wc -l'
+    alias pkgown='xbps-query -o'
+    alias orphans='sudo xbps-remove -o'
+fi
+
+# ─── man page colors ─────────────────────────────────────────────────────────
+export LESS_TERMCAP_mb=$'\E[1;31m'
+export LESS_TERMCAP_md=$'\E[1;36m'
+export LESS_TERMCAP_me=$'\E[0m'
+export LESS_TERMCAP_so=$'\E[01;44;33m'
+export LESS_TERMCAP_se=$'\E[0m'
+export LESS_TERMCAP_us=$'\E[1;32m'
+export LESS_TERMCAP_ue=$'\E[0m'
+
+export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+
+# ─── functions ───────────────────────────────────────────────────────────────
+function http-server() { python3 -m http.server; }
+function term() { clear; }
+
+mkcd()    { mkdir -p "$1" && cd "$1"; }
+backup()  { cp "$1" "$1.backup-$(date +%Y%m%d-%H%M%S)"; }
+killp()   { ps aux | grep "$1" | grep -v grep | awk '{print $2}' | xargs sudo kill -9; }
+
+whatsmyip() {
+    echo "Local IP:    $(hostname -I | awk '{print $1}')"
+    echo "External IP: $(curl -s ifconfig.me)"
+}
+
+path()       { echo $PATH | tr ':' '\n'; }
+duh()        { du -h --max-depth=1 | sort -rh; }
+countfiles() { find "${1:-.}" -type f | wc -l; }
+bigfiles()   { find . -type f -exec du -h {} + | sort -rh | head -${1:-20}; }
+
+isup() {
+    curl -s --head --request GET "$1" | grep "200 OK" > /dev/null \
+        && echo "✓ UP" || echo "✗ DOWN"
+}
+
+
+testhost() {
+    [ -z "$1" ] && echo "Usage: testhost <hostname>" && return 1
+    echo "Testing $1..."
+    ping -c 5 "$1"
+    echo
+    dig +short "$1"
+}
+
+portcheck() {
+    [ -z "$1" ] || [ -z "$2" ] && echo "Usage: portcheck <host> <port>" && return 1
+    timeout 3 bash -c "echo >/dev/tcp/$1/$2" 2>/dev/null \
+        && echo "Port $2 is OPEN on $1" \
+        || echo "Port $2 is CLOSED on $1"
+}
+
+# ─── path ────────────────────────────────────────────────────────────────────
+export PATH="$PATH:$HOME/.local/bin:$HOME/bin"
+
+# ─── myfastfetch on terminal start ───────────────────────────────────────────
+command -v myfastfetch >/dev/null 2>&1 && myfastfetch
