@@ -60,6 +60,7 @@ Logos are sourced from [`0xb0rn3/my-fastfetch-config`](https://github.com/0xb0rn
 | [WezTerm](https://wezfurlong.org/wezterm/) | ✓ |
 | [iTerm2](https://iterm2.com/) | ✓ (macOS) |
 | [Terminology](https://www.enlightenment.org/about-terminology) | ✓ |
+| [Konsole] | ✓ |
 
 Text-only terminals will still display system info — just without the image logo.
 
