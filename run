@@ -1,0 +1,474 @@
+#!/usr/bin/env bash
+
+# ─── colors ──────────────────────────────────────────────────────────────────
+BOLD='\033[1m'    DIM='\033[2m'      ITALIC='\033[3m'
+RED='\033[1;31m'  GREEN='\033[1;32m' YELLOW='\033[1;33m'
+BLUE='\033[1;34m' PURPLE='\033[1;35m' CYAN='\033[1;36m'
+WHITE='\033[1;37m' GRAY='\033[0;90m'
+BRIGHT_RED='\033[91m'    BRIGHT_GREEN='\033[92m'  BRIGHT_YELLOW='\033[93m'
+BRIGHT_BLUE='\033[94m'   BRIGHT_PURPLE='\033[95m' BRIGHT_CYAN='\033[96m'
+NC='\033[0m'
+
+# ─── config ──────────────────────────────────────────────────────────────────
+VERSION="2.0.0"
+INSTALL_DIR="/usr/bin"
+LOG_FILE="/tmp/fetchtools_install_$(date +%Y%m%d_%H%M%S).log"
+TERM_WIDTH=$(tput cols 2>/dev/null || echo 80)
+CURRENT_USER="${SUDO_USER:-$USER}"
+USER_HOME=$(getent passwd "$CURRENT_USER" 2>/dev/null | cut -d: -f6 || echo "$HOME")
+ZSH_CUSTOM="$USER_HOME/.oh-my-zsh/custom"
+FASTFETCH_CFG="$USER_HOME/.config/fastfetch"
+LOGOS_REPO="https://github.com/0xb0rn3/my-fastfetch-config.git"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# --update-logos   pull latest logos from the upstream repo and exit
+# ─────────────────────────────────────────────────────────────────────────────
+if [[ "${1:-}" == "--update-logos" ]]; then
+    echo -e "${BRIGHT_CYAN}[*] Pulling logos from upstream...${NC}"
+    if ! command -v git >/dev/null 2>&1; then
+        echo -e "${BRIGHT_RED}[!] git is not installed.${NC}"; exit 1
+    fi
+    TMP=$(mktemp -d)
+    git clone --depth=1 --filter=blob:none --sparse "$LOGOS_REPO" "$TMP" \
+        >/dev/null 2>&1 || { echo -e "${BRIGHT_RED}[!] Clone failed.${NC}"; rm -rf "$TMP"; exit 1; }
+    git -C "$TMP" sparse-checkout set logos >/dev/null 2>&1
+    if [ -d "$TMP/logos" ] && [ "$(ls -A "$TMP/logos" 2>/dev/null)" ]; then
+        mkdir -p "$HOME/.config/fastfetch/logos"
+        cp -rf "$TMP/logos/." "$HOME/.config/fastfetch/logos/"
+        echo -e "${BRIGHT_GREEN}[✓] Logos written to ~/.config/fastfetch/logos/${NC}"
+    else
+        echo -e "${BRIGHT_RED}[!] logos/ directory was empty after checkout.${NC}"
+        rm -rf "$TMP"; exit 1
+    fi
+    rm -rf "$TMP"
+    exit 0
+fi
+
+# ─── display helpers ─────────────────────────────────────────────────────────
+print_border() {
+    local char="$1" color="$2" delay="$3"
+    echo -ne "$color"
+    for (( i=0; i<TERM_WIDTH; i++ )); do echo -ne "$char"; sleep "$delay"; done
+    echo -e "$NC"
+}
+
+print_banner() {
+    clear; echo
+    print_border "═" "$BRIGHT_CYAN" 0.005
+    echo -e "${BOLD}${BRIGHT_BLUE}"
+    echo '    ╔═══════════════════════════════════════════════════════╗'
+    echo '    ║                                                       ║'
+    echo '    ║           🎌  fastfetch  🎌                          ║'
+    echo '    ║                                                       ║'
+    echo '    ║                by 0xb0rn3 | 0xbv1                    ║'
+    echo '    ║                                                       ║'
+    echo '    ║       github.com/0xb0rn3/fetch-tools                 ║'
+    echo '    ║                                                       ║'
+    echo '    ╚═══════════════════════════════════════════════════════╝'
+    echo -e "${NC}"
+    echo -e "${DIM}${BRIGHT_CYAN}                       installer  v${VERSION}${NC}"
+    print_border "═" "$BRIGHT_CYAN" 0.005
+    echo
+}
+
+print_status() {
+    local text="$1" status="$2" icon color
+    case $status in
+        OK)     icon="✅"; color="${BRIGHT_GREEN}" ;;
+        FAIL)   icon="❌"; color="${BRIGHT_RED}" ;;
+        WARN)   icon="⚠ "; color="${BRIGHT_YELLOW}" ;;
+        INFO)   icon="ℹ "; color="${BRIGHT_BLUE}" ;;
+        SKIP)   icon="⏭ "; color="${GRAY}" ;;
+        SUDO)   icon="🔐"; color="${BRIGHT_PURPLE}" ;;
+        DETECT) icon="🔍"; color="${BRIGHT_CYAN}" ;;
+        *)      icon="⚡"; color="${BRIGHT_PURPLE}" ;;
+    esac
+    printf "${ITALIC}${WHITE}%-45s${NC}" "$text"
+    echo -e "${color}${icon} ${status}${NC}"
+}
+
+print_section() {
+    local text="$1"
+    local pad=$(( (60 - ${#text}) / 2 ))
+    echo -e "\n${BOLD}${BRIGHT_CYAN}╭$(printf '%*s' $pad | tr ' ' '─')─ ${text} ─$(printf '%*s' $pad | tr ' ' '─')╮${NC}"
+}
+
+show_spinner() {
+    local pid=$1 text="$2"
+    local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+    local delay=0.1 i=0
+    while kill -0 "$pid" 2>/dev/null; do
+        printf "\r${ITALIC}${WHITE}%-45s${NC} ${BRIGHT_BLUE}${frames[i]}${NC} ${DIM}working...${NC}" "$text"
+        i=$(( (i+1) % ${#frames[@]} ))
+        sleep "$delay"
+    done
+    printf "\r${ITALIC}${WHITE}%-45s${NC} ${BRIGHT_GREEN}✅ done${NC}\n" "$text"
+}
+
+# ─── privilege check ─────────────────────────────────────────────────────────
+check_sudo() {
+    print_section "Privilege Check"
+    if [ "$EUID" -eq 0 ]; then
+        if [ -z "$SUDO_USER" ]; then
+            print_status "Running as bare root" "WARN"
+            echo -e "${BRIGHT_YELLOW}  Run with sudo, not as root directly.${NC}"
+            exit 1
+        fi
+        print_status "Sudo confirmed" "OK"
+        echo -e "${DIM}  user: ${BRIGHT_GREEN}${SUDO_USER}${NC}"
+        return 0
+    fi
+    print_status "Current user" "INFO"
+    echo -e "${DIM}  ${BRIGHT_YELLOW}${USER}${NC}"
+    if ! command -v sudo >/dev/null 2>&1; then
+        print_status "sudo not found" "FAIL"; exit 1
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        print_status "Password required" "SUDO"
+        sudo -v || { print_status "Auth failed" "FAIL"; exit 1; }
+    fi
+    print_status "Privileges confirmed" "OK"
+    echo -e "${BRIGHT_GREEN}  re-executing with sudo...${NC}"
+    exec sudo "$0" "$@"
+}
+
+# ─── os detection ────────────────────────────────────────────────────────────
+detect_os() {
+    print_section "System Detection"
+    print_status "Kernel" "DETECT"
+    echo -e "${DIM}  $(uname -s) $(uname -r) / $(uname -m)${NC}"
+
+    if [ -f /etc/arch-release ]; then
+        PM="pacman"; PM_INSTALL="pacman -S --noconfirm"; PM_UPDATE="pacman -Sy"
+        PKGS="base-devel gcc make zsh noto-fonts-emoji git curl fastfetch"
+        OS="Arch"
+        DISTRO=$(grep -oP '(?<=PRETTY_NAME=").*(?=")' /etc/os-release 2>/dev/null || echo "Arch Linux")
+    elif [ -f /etc/debian_version ]; then
+        PM="apt-get"; PM_INSTALL="apt-get install -y"; PM_UPDATE="apt-get update"
+        PKGS="build-essential gcc make zsh git fonts-noto-color-emoji curl fastfetch"
+        OS="Debian"
+        DISTRO=$(lsb_release -d 2>/dev/null | cut -f2 || cat /etc/debian_version)
+    elif [ -f /etc/redhat-release ]; then
+        PM="dnf"; PM_INSTALL="dnf install -y"; PM_UPDATE="dnf update -y"
+        PKGS="gcc gcc-c++ make zsh git curl fastfetch"
+        OS="RedHat"
+        DISTRO=$(cat /etc/redhat-release 2>/dev/null || echo "Red Hat Linux")
+    elif [ -f /etc/os-release ] && grep -qi "opensuse\|suse" /etc/os-release; then
+        PM="zypper"; PM_INSTALL="zypper install -y"; PM_UPDATE="zypper refresh"
+        PKGS="gcc make zsh git curl fastfetch"
+        OS="openSUSE"
+        DISTRO=$(grep -oP '(?<=PRETTY_NAME=").*(?=")' /etc/os-release 2>/dev/null || echo "openSUSE")
+    elif command -v xbps-install >/dev/null 2>&1; then
+        PM="xbps-install"; PM_INSTALL="xbps-install -Sy"; PM_UPDATE="xbps-install -Su"
+        PKGS="gcc make zsh git curl fastfetch"
+        OS="Void"; DISTRO="Void Linux"
+    else
+        print_status "Distribution" "FAIL"
+        echo -e "${BRIGHT_RED}  Unsupported distro. Supports: Arch, Debian/Ubuntu, Fedora/RHEL, openSUSE, Void${NC}"
+        exit 1
+    fi
+
+    print_status "Distribution" "OK"
+    echo -e "${DIM}  ${BRIGHT_GREEN}${DISTRO}${NC}"
+    print_status "Package manager" "DETECT"
+    echo -e "${DIM}  ${BRIGHT_CYAN}${PM}${NC}"
+}
+
+pkg_installed() {
+    case $OS in
+        Arch)    pacman -Q "$1" &>/dev/null ;;
+        Debian)  dpkg -l | grep -q " $1 " ;;
+        RedHat|openSUSE) rpm -q "$1" &>/dev/null ;;
+        Void)    xbps-query "$1" &>/dev/null ;;
+    esac
+}
+
+# ─── install packages ────────────────────────────────────────────────────────
+install_packages() {
+    print_section "Packages"
+    echo -e "${BRIGHT_CYAN}[*] Syncing package database...${NC}"
+    ($PM_UPDATE >/dev/null 2>&1) &
+    show_spinner $! "syncing"
+
+    local inst=0 skip=0
+    for pkg in $PKGS; do
+        if pkg_installed "$pkg"; then
+            print_status "$pkg" "SKIP"; (( skip++ ))
+        else
+            echo -e "${BRIGHT_BLUE}[+] Installing ${pkg}...${NC}"
+            ($PM_INSTALL "$pkg" >/dev/null 2>&1) &
+            show_spinner $! "$pkg"
+            (( inst++ ))
+        fi
+    done
+    echo -e "\n${BRIGHT_GREEN}  installed: ${BRIGHT_CYAN}${inst}${BRIGHT_GREEN}   skipped: ${BRIGHT_YELLOW}${skip}${NC}"
+}
+
+# ─── fastfetch suite ─────────────────────────────────────────────────────────
+#   - verifies fastfetch binary
+#   - copies config.jsonc
+#   - pulls logos from upstream repo (sparse checkout, logos/ only)
+#   - installs myfastfetch to /usr/local/bin and makes it executable
+install_fastfetch_suite() {
+    print_section "fastfetch Suite"
+
+    if ! command -v fastfetch >/dev/null 2>&1; then
+        print_status "fastfetch binary" "FAIL"
+        echo -e "${BRIGHT_RED}  fastfetch not found after package install.${NC}"
+        exit 1
+    fi
+    print_status "fastfetch binary" "OK"
+
+    mkdir -p "$FASTFETCH_CFG"
+    print_status "config directory" "OK"
+    echo -e "${DIM}  ${BRIGHT_GREEN}${FASTFETCH_CFG}${NC}"
+
+    # config.jsonc
+    if [ -f "config.jsonc" ]; then
+        cp -f config.jsonc "$FASTFETCH_CFG/"
+        print_status "config.jsonc" "OK"
+    else
+        print_status "config.jsonc" "WARN"
+        echo -e "${DIM}  config.jsonc not found in project directory${NC}"
+    fi
+
+    # logos — sparse clone of logos/ from upstream repo
+    echo -e "${BRIGHT_BLUE}[*] Pulling logos from upstream...${NC}"
+    (
+        TMP=$(mktemp -d)
+        # sparse clone: only metadata, no blobs yet
+        git clone --depth=1 --filter=blob:none --sparse \
+            "$LOGOS_REPO" "$TMP" >/dev/null 2>&1
+        # declare which path we want — git then fetches those blobs
+        git -C "$TMP" sparse-checkout set logos >/dev/null 2>&1
+        if [ -d "$TMP/logos" ] && [ "$(ls -A "$TMP/logos" 2>/dev/null)" ]; then
+            mkdir -p "$FASTFETCH_CFG/logos"
+            cp -rf "$TMP/logos/." "$FASTFETCH_CFG/logos/"
+        fi
+        rm -rf "$TMP"
+    ) &
+    show_spinner $! "pulling logos"
+
+    if [ -d "$FASTFETCH_CFG/logos" ] && [ "$(ls -A "$FASTFETCH_CFG/logos" 2>/dev/null)" ]; then
+        local count
+        count=$(ls -1 "$FASTFETCH_CFG/logos" | wc -l)
+        print_status "logos" "OK"
+        echo -e "${DIM}  ${BRIGHT_GREEN}${count} logos → ${FASTFETCH_CFG}/logos/${NC}"
+    else
+        print_status "logos" "WARN"
+        echo -e "${BRIGHT_YELLOW}  Logo pull may have failed. Run: ./run --update-logos${NC}"
+    fi
+
+    # myfastfetch script
+    if [ ! -f "myfastfetch" ]; then
+        print_status "myfastfetch" "FAIL"
+        echo -e "${BRIGHT_RED}  myfastfetch not found in project directory.${NC}"
+        exit 1
+    fi
+    chmod +x myfastfetch
+    sudo cp -f myfastfetch /usr/local/bin/myfastfetch
+    sudo chmod +x /usr/local/bin/myfastfetch
+    print_status "myfastfetch" "OK"
+    echo -e "${DIM}  /usr/local/bin/myfastfetch${NC}"
+}
+
+# ─── oh-my-zsh ───────────────────────────────────────────────────────────────
+install_omz() {
+    print_section "Oh My Zsh"
+    if [ -d "$USER_HOME/.oh-my-zsh" ]; then
+        print_status "oh-my-zsh" "SKIP"; echo -e "${DIM}  already present${NC}"; return
+    fi
+    (sudo -u "$CURRENT_USER" sh -c \
+        "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
+        "" --unattended >/dev/null 2>&1) &
+    show_spinner $! "installing oh-my-zsh"
+    print_status "oh-my-zsh" "OK"
+    echo -e "${DIM}  ${USER_HOME}/.oh-my-zsh${NC}"
+}
+
+install_zsh_plugins() {
+    print_section "Zsh Plugins"
+    local plugins=(
+        "zsh-syntax-highlighting|https://github.com/zsh-users/zsh-syntax-highlighting.git"
+        "zsh-autosuggestions|https://github.com/zsh-users/zsh-autosuggestions.git"
+    )
+    for entry in "${plugins[@]}"; do
+        local name="${entry%%|*}" url="${entry##*|}"
+        local dir="$ZSH_CUSTOM/plugins/$name"
+        if [ -d "$dir" ]; then
+            print_status "$name" "SKIP"
+        else
+            (sudo -u "$CURRENT_USER" git clone --depth=1 "$url" "$dir" >/dev/null 2>&1) &
+            show_spinner $! "$name"
+        fi
+    done
+}
+
+# ─── ble.sh ──────────────────────────────────────────────────────────────────
+install_blesh() {
+    print_section "ble.sh"
+    local dir="$USER_HOME/.local/share/blesh"
+    if [ -d "$dir" ]; then
+        print_status "ble.sh" "SKIP"; echo -e "${DIM}  already present${NC}"; return
+    fi
+    (
+        cd "$USER_HOME"
+        sudo -u "$CURRENT_USER" git clone --recursive --depth 1 --shallow-submodules \
+            https://github.com/akinomyoga/ble.sh.git >/dev/null 2>&1
+        cd ble.sh
+        sudo -u "$CURRENT_USER" make install PREFIX="$USER_HOME/.local" >/dev/null 2>&1
+        rm -rf "$USER_HOME/ble.sh"
+    ) &
+    show_spinner $! "installing ble.sh"
+    if [ -d "$dir" ]; then
+        print_status "ble.sh" "OK"; echo -e "${DIM}  $dir${NC}"
+    else
+        print_status "ble.sh" "FAIL"
+    fi
+}
+
+# ─── shell config ────────────────────────────────────────────────────────────
+configure_zsh() {
+    print_section "Zsh Configuration"
+    local rc="$USER_HOME/.zshrc"
+    if [ -f "$rc" ]; then
+        local bk="${rc}.backup.$(date +%Y%m%d_%H%M%S)"
+        cp "$rc" "$bk"
+        print_status "backup" "OK"; echo -e "${DIM}  $bk${NC}"
+    fi
+    cat .src/templates/zshrc.template > "$rc"
+    chown "$CURRENT_USER:$CURRENT_USER" "$rc"
+    chmod 644 "$rc"
+    print_status "~/.zshrc" "OK"
+}
+
+configure_bash() {
+    print_section "Bash Configuration"
+    local rc="$USER_HOME/.bashrc"
+    if [ -f "$rc" ]; then
+        local bk="${rc}.backup.$(date +%Y%m%d_%H%M%S)"
+        cp "$rc" "$bk"
+        print_status "backup" "OK"; echo -e "${DIM}  $bk${NC}"
+    fi
+    cat .src/templates/bashrc.template > "$rc"
+    # append ble.sh source line if it was installed
+    if [ -d "$USER_HOME/.local/share/blesh" ]; then
+        printf '\n# ble.sh\n[[ $- == *i* ]] && source "%s/.local/share/blesh/ble.sh"\n' \
+            "$USER_HOME" >> "$rc"
+    fi
+    chown "$CURRENT_USER:$CURRENT_USER" "$rc"
+    chmod 644 "$rc"
+    print_status "~/.bashrc" "OK"
+}
+
+# ─── change default shell ────────────────────────────────────────────────────
+change_shell() {
+    print_section "Default Shell"
+    [ "$SHELL_CHOICE" != "zsh" ] && print_status "shell change" "SKIP" && return
+    local cur zsh_bin
+    cur=$(getent passwd "$CURRENT_USER" | cut -d: -f7)
+    zsh_bin=$(command -v zsh)
+    if [ "$cur" = "$zsh_bin" ]; then
+        print_status "already zsh" "SKIP"; return
+    fi
+    grep -q "^${zsh_bin}$" /etc/shells || echo "$zsh_bin" >> /etc/shells
+    echo -e "\n${BRIGHT_CYAN}  Change default shell to zsh? [y/N]${NC}"
+    read -r -n 1 ans; echo
+    if [[ "$ans" =~ ^[Yy]$ ]]; then
+        (chsh -s "$zsh_bin" "$CURRENT_USER" >/dev/null 2>&1) &
+        show_spinner $! "changing shell"
+        print_status "default shell → zsh" "OK"
+    else
+        print_status "shell change" "SKIP"
+    fi
+}
+
+# ─── cleanup ─────────────────────────────────────────────────────────────────
+cleanup() {
+    print_section "Cleanup"
+    (rm -f fetch) &
+    show_spinner $! "removing temp files"
+    print_status "cleanup" "OK"
+}
+
+# ─── done ────────────────────────────────────────────────────────────────────
+print_done() {
+    echo -e "\n${BOLD}${BRIGHT_GREEN}╔══════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${BOLD}${BRIGHT_GREEN}║                                                          ║${NC}"
+    echo -e "${BOLD}${BRIGHT_GREEN}║                  installation done                      ║${NC}"
+    echo -e "${BOLD}${BRIGHT_GREEN}║                                                          ║${NC}"
+    echo -e "${BOLD}${BRIGHT_GREEN}╚══════════════════════════════════════════════════════════╝${NC}"
+    echo -e "\n${BOLD}${WHITE}commands:${NC}"
+    echo -e "  ${BRIGHT_CYAN}myfastfetch${NC}          — system info with random anime logo"
+    echo -e "  ${BRIGHT_CYAN}./run --update-logos${NC} — pull latest logos from upstream"
+    echo -e "  ${BRIGHT_CYAN}update${NC}               — distro-aware system update"
+    echo -e "  ${BRIGHT_CYAN}install <pkg>${NC}        — distro-aware package install"
+    echo -e "  ${BRIGHT_CYAN}clean${NC}                — distro-aware cache clean"
+    echo
+    echo -e "${BOLD}${WHITE}locations:${NC}"
+    echo -e "  ${DIM}myfastfetch  →${NC} ${BRIGHT_GREEN}/usr/local/bin/myfastfetch${NC}"
+    echo -e "  ${DIM}logos        →${NC} ${BRIGHT_GREEN}${FASTFETCH_CFG}/logos/${NC}"
+    echo -e "  ${DIM}config       →${NC} ${BRIGHT_GREEN}${FASTFETCH_CFG}/config.jsonc${NC}"
+    if [ "$SHELL_CHOICE" = "zsh" ]; then
+        echo -e "  ${DIM}shell config →${NC} ${BRIGHT_GREEN}${USER_HOME}/.zshrc${NC}"
+    else
+        echo -e "  ${DIM}shell config →${NC} ${BRIGHT_GREEN}${USER_HOME}/.bashrc${NC}"
+    fi
+    echo -e "  ${DIM}log          →${NC} ${BRIGHT_YELLOW}${LOG_FILE}${NC}"
+    echo
+    echo -e "${BOLD}${BRIGHT_YELLOW}  Log out and back in, or run:${NC}"
+    echo -e "${BOLD}${BRIGHT_CYAN}  source ~/.\$(basename \"\$SHELL\")rc${NC}"
+    echo
+}
+
+# ─── main ────────────────────────────────────────────────────────────────────
+main() {
+    print_banner
+    check_sudo
+    detect_os
+
+    echo -e "${BRIGHT_CYAN}  Select shell to configure:${NC}"
+    echo -e "  ${BOLD}1)${NC} ${BRIGHT_GREEN}Bash${NC}  ${DIM}(ble.sh)${NC}"
+    echo -e "  ${BOLD}2)${NC} ${BRIGHT_BLUE}Zsh${NC}   ${DIM}(oh-my-zsh)${NC}"
+    echo
+    echo -ne "${BRIGHT_CYAN}  choice [1-2]: ${NC}"
+    read -r choice
+
+    case $choice in
+        1) SHELL_CHOICE="bash"
+           print_status "shell → bash" "OK" ;;
+        2) SHELL_CHOICE="zsh"
+           print_status "shell → zsh" "OK" ;;
+        *) print_status "invalid choice" "FAIL"; exit 1 ;;
+    esac
+
+    install_packages
+    install_fastfetch_suite
+
+    if [ "$SHELL_CHOICE" = "zsh" ]; then
+        install_omz
+        install_zsh_plugins
+        configure_zsh
+        change_shell
+    else
+        install_blesh
+        configure_bash
+    fi
+
+    cleanup
+    print_done
+}
+
+{
+    main "$@"
+} 2>&1 | tee -a "$LOG_FILE"
+
+if [ "${PIPESTATUS[0]}" -eq 0 ]; then
+    clear
+    echo -e "${BRIGHT_GREEN}[✓] Installation finished.${NC}"
+    echo -e "${BRIGHT_YELLOW}    Log out and back in to apply changes.${NC}"
+    sleep 2
+else
+    echo -e "${BRIGHT_RED}[!] Something went wrong. Check log: ${LOG_FILE}${NC}"
+    exit 1
+fi
