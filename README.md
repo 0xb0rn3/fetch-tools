@@ -31,7 +31,7 @@ Every time you open a terminal, `myfastfetch` fires — pulling a random anime l
 ```bash
 git clone https://github.com/0xb0rn3/fetch-tools.git
 cd fetch-tools
-chmod +x run myfastfetch
+chmod +x run 
 sudo ./run
 ```
 
