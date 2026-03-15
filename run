@@ -145,7 +145,7 @@ detect_os() {
         DISTRO=$(grep -oP '(?<=PRETTY_NAME=").*(?=")' /etc/os-release 2>/dev/null || echo "Arch Linux")
     elif [ -f /etc/debian_version ]; then
         PM="apt-get"; PM_INSTALL="apt-get install -y"; PM_UPDATE="apt-get update"
-        PKGS="build-essential gcc make zsh git fonts-noto-color-emoji curl fastfetch"
+        PKGS="base-devel gcc make zsh noto-fonts-emoji ttf-jetbrains-mono-nerd git curl fastfetch mesa-utils"
         OS="Debian"
         DISTRO=$(lsb_release -d 2>/dev/null | cut -f2 || cat /etc/debian_version)
     elif [ -f /etc/redhat-release ]; then
