@@ -343,9 +343,6 @@ duh()        { du -h --max-depth=1 | sort -rh; }
 countfiles() { find "${1:-.}" -type f | wc -l; }
 bigfiles()   { find . -type f -exec du -h {} + | sort -rh | head -${1:-20}; }
 
-urlencode() { python3 -c "import urllib.parse; print(urllib.parse.quote('$1'))"; }
-urldecode() { python3 -c "import urllib.parse; print(urllib.parse.unquote('$1'))"; }
-
 isup() {
     curl -s --head --request GET "$1" | grep "200 OK" > /dev/null \
         && echo "✓ UP" || echo "✗ DOWN"
