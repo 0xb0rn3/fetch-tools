@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+
+LOGO_DIR="$HOME/.config/fastfetch/logos"
+USED_FILE="$HOME/.config/fastfetch/used_logos.txt"
+
+# self-heal: if the config dir exists but is owned by root (common after sudo install),
+# fix ownership silently so tracking and logo reads work correctly
+_cfg_dir="$HOME/.config/fastfetch"
+if [ -d "$_cfg_dir" ] && [ ! -w "$_cfg_dir" ]; then
+    sudo chown -R "$USER:$USER" "$_cfg_dir" 2>/dev/null
+fi
+unset _cfg_dir
+
+# ─── terminal graphics protocol detection ────────────────────────────────────
+# fastfetch can't reliably auto-detect when $TERM_PROGRAM is unset (common on
+# Konsole under non-KDE sessions like XFWM4, openbox, i3, etc.).
+# detect once at the top so every fastfetch call gets the right --logo-type.
+detect_logo_type() {
+    # kitty terminal identifies itself unambiguously
+    if [ -n "$KITTY_PID" ]; then
+        echo "kitty"; return
+    fi
+
+    # konsole always sets $KONSOLE_VERSION, even when TERM_PROGRAM is empty.
+    # kitty protocol support is inconsistent across konsole builds/sessions;
+    # sixel is the reliable universal path.
+    if [ -n "$KONSOLE_VERSION" ]; then
+        echo "sixel"; return
+    fi
+
+    # wezterm
+    if [ "$TERM_PROGRAM" = "WezTerm" ]; then
+        echo "kitty"; return
+    fi
+
+    # ghostty
+    if [ "$TERM_PROGRAM" = "ghostty" ]; then
+        echo "kitty"; return
+    fi
+
+    # iterm2
+    if [ "$TERM_PROGRAM" = "iTerm.app" ] || [ -n "$ITERM_SESSION_ID" ]; then
+        echo "iterm"; return
+    fi
+
+    # foot (wayland) — supports sixel natively
+    if [ "$TERM" = "foot" ] || [ "$TERM" = "foot-extra" ]; then
+        echo "sixel"; return
+    fi
+
+    # xterm with sixel (rare but possible)
+    if [ "$TERM_PROGRAM" = "xterm" ]; then
+        echo "sixel"; return
+    fi
+
+    # fallback: let fastfetch try auto, which may or may not work
+    echo "auto"
+}
+
+LOGO_TYPE="$(detect_logo_type)"
+
+# build the fastfetch logo arguments
+_ff_logo() {
+    local logo_path="$1"
+    if [ "$LOGO_TYPE" = "auto" ]; then
+        fastfetch --logo "$logo_path"
+    else
+        fastfetch --logo-type "$LOGO_TYPE" --logo "$logo_path"
+    fi
+}
+
+fastfetch_random() {
+    if [ ! -d "$LOGO_DIR" ]; then
+        echo "[!] Logo directory not found: $LOGO_DIR"
+        echo "    Run: ./run --update-logos"
+        return 1
+    fi
+
+    mapfile -t all_logos < <(ls -1 "$LOGO_DIR" 2>/dev/null)
+
+    if [ "${#all_logos[@]}" -eq 0 ]; then
+        echo "[!] No logos found in $LOGO_DIR"
+        echo "    Run: ./run --update-logos"
+        return 1
+    fi
+
+    # degraded mode: if the config dir is still not writable after the heal attempt,
+    # pick a random logo and run without tracking — beats a crash
+    if [ ! -w "$(dirname "$USED_FILE")" ]; then
+        LOGO="${all_logos[$(( RANDOM % ${#all_logos[@]} ))]}"
+        _ff_logo "$LOGO_DIR/$LOGO"
+        return
+    fi
+
+    if [ -f "$USED_FILE" ]; then
+        mapfile -t used_logos < "$USED_FILE"
+    else
+        used_logos=()
+    fi
+
+    # build pool of logos not yet shown this cycle
+    unused_logos=()
+    for logo in "${all_logos[@]}"; do
+        if ! printf '%s\n' "${used_logos[@]}" | grep -qx "$logo"; then
+            unused_logos+=("$logo")
+        fi
+    done
+
+    # full cycle done — reset and start over
+    if [ "${#unused_logos[@]}" -eq 0 ]; then
+        unused_logos=("${all_logos[@]}")
+        : > "$USED_FILE"
+    fi
+
+    rand_index=$(( RANDOM % ${#unused_logos[@]} ))
+    LOGO="${unused_logos[$rand_index]}"
+    echo "$LOGO" >> "$USED_FILE"
+    _ff_logo "$LOGO_DIR/$LOGO"
+}
+
+fastfetch_random
