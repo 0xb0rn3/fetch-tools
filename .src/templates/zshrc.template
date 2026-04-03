@@ -211,7 +211,23 @@ alias myip='curl -s ifconfig.me && echo'
 alias netinfo='netspeed -i'
 alias ping1='ping -c 5 1.1.1.1'
 alias ping8='ping -c 5 8.8.8.8'
-
+show-MAC() {
+    local iface gateway gw_mac local_mac local_ip
+    iface=$(ip route | awk '/default/ {print $5; exit}')
+    gateway=$(ip route | awk '/default/ {print $3; exit}')
+    gw_mac=$(ip neigh show "$gateway" 2>/dev/null | awk '{print $5}')
+    local_mac=$(ip link show "$iface" 2>/dev/null | awk '/ether/ {print $2}')
+    local_ip=$(ip -4 addr show "$iface" 2>/dev/null | awk '/inet / {print $2}')
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  Network Gateway Info"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    printf "  %-14s %s\n" "Interface:"   "${iface:-unknown}"
+    printf "  %-14s %s\n" "Local IP:"    "${local_ip:-unknown}"
+    printf "  %-14s %s\n" "Local MAC:"   "${local_mac:-unknown}"
+    printf "  %-14s %s\n" "Gateway IP:"  "${gateway:-unknown}"
+    printf "  %-14s %s\n" "Gateway MAC:" "${gw_mac:-not in arp cache}"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+}
 # web search
 alias google='web_search google'
 alias bing='web_search bing'
